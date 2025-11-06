@@ -1,18 +1,57 @@
 "use client"
-import { Mail, Lock, ArrowLeft } from "lucide-react";
+import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../public/icons/logogetsweet.png";
+import { useState } from "react";
 
-
-
+const API_BASE_URL = "https://backend-get-sweet-v2-0.onrender.com";
 const GOOGLE_ICON_URL = "https://www.svgrepo.com/show/475656/google-color.svg";
 
 export default function SignIn() {
-    const handleBackToHome = () => {
-    console.log("Navegando de vuelta a la página de inicio...");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleBackToHome = () => {
     window.location.href = '/';
   };
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    if (!email || !password) {
+      setError('Por favor, ingresa tu email y contraseña.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('userToken', data.token);
+        window.location.href = '/thank-u'; 
+      } else {
+        const errorMessage = data.message || 'Error desconocido al iniciar sesión.';
+        setError(errorMessage);
+      }
+    } catch (err) {
+      setError('No se pudo conectar al servidor. Verifica la URL de la API o la conexión a internet.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section 
@@ -21,21 +60,19 @@ export default function SignIn() {
         background: 'radial-gradient(circle at center top, #ffffff 0%, #ffffff 30%, #f3e8ff 70%, #d8b4fe 100%)',
       }}
     >
-        <button
+      <button
         onClick={handleBackToHome}
         className="absolute top-8 left-4 md:top-12 md:left-26
                    flex items-center gap-2 text-sm font-medium text-purple-900
                    hover:text-purple-600 transition duration-150 p-4 
-                     hover-shadow-md"
+                   hover-shadow-md"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Home
       </button>
 
       <div className="bg-white shadow-xl rounded-2xl p-10 w-full max-w-md text-center mx-4 my-8">
-        {/* Header */}
         <div className="flex items-center justify-center mb-6">
-         
           <div className="p-3">
             <Image
               src={logo}
@@ -54,7 +91,6 @@ export default function SignIn() {
           Sign in to continue to Get Sweet AI
         </p>
 
-        {/* Google Sign-In */}
         <button
           className="w-full mb-4 flex items-center justify-center gap-3 border border-gray-300 bg-white hover:bg-gray-50 hover:shadow-lg transition duration-150 py-2.5 rounded-lg text-gray-700 font-semibold shadow-sm"
         >
@@ -74,8 +110,7 @@ export default function SignIn() {
           <div className="flex-1 h-px bg-gray-200"></div>
         </div>
 
-        {/* Form */}
-        <form className="space-y-4 text-left">
+        <form className="space-y-4 text-left" onSubmit={handleLogin}>
           <div>
             <label className="text-sm text-gray-700 font-medium">Email</label>
             <div className="relative mt-1">
@@ -83,6 +118,8 @@ export default function SignIn() {
               <input
                 type="email"
                 placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="text-gray-800 w-full border border-gray-300 rounded-lg py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition duration-150"
               />
             </div>
@@ -95,6 +132,8 @@ export default function SignIn() {
               <input
                 type="password"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="text-gray-800 w-full border border-gray-300 rounded-lg py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition duration-150"
               />
             </div>
@@ -108,11 +147,24 @@ export default function SignIn() {
             </div>
           </div>
 
+          {error && (
+            <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+          )}
+
           <button 
             type="submit"
-            className="w-full bg-linear-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 hover:shadow-lg transition duration-300 text-white font-semibold py-3 rounded-lg shadow-md mt-6"
+            disabled={loading}
+            className={`w-full transition duration-300 text-white font-semibold py-3 rounded-lg shadow-md mt-6 ${
+              loading 
+                ? 'bg-gray-400 cursor-not-allowed flex items-center justify-center' 
+                : 'bg-linear-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 hover:shadow-lg'
+            }`}
           >
-            Sign In
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
@@ -122,9 +174,8 @@ export default function SignIn() {
             Sign up for free
           </a>
         </p>
-
-        
       </div>
+
       <div className="absolute bottom-4 sm:bottom-10">
         <p className="text-[11px] text-gray-400/70 mt-6 text-center">
           Protected by enterprise-grade security

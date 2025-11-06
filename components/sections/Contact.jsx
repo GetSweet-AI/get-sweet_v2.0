@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Mail, Phone, MapPin, MessageCircleDashed } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -49,6 +49,54 @@ const FormInput = ({ id, label, placeholder, type = 'text',required = false, cla
 
 // --- Componente Principal de la Sección de Contacto ---
 export function ContactUsSection() {
+    const [token, setToken] = useState(null);
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+
+    useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    const storedName = localStorage.getItem('fullName');
+    const storedEmail = localStorage.getItem('email');
+
+    if (storedToken) setToken(storedToken);
+    if (storedName) setFullName(storedName);
+    if (storedEmail) setEmail(storedEmail);
+
+    }, []);
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const name = e.target.name.value;
+  const email = e.target.email.value;
+  const company = e.target.company.value;
+  const message = e.target.message.value;
+
+  if (!token) {
+    alert("Please login or register first!");
+    return;
+  }
+
+  try {
+    const res = await fetch("https://backend-get-sweet-v2-0.onrender.com/api/v1/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name, email, company, message }),
+    });
+
+    if (!res.ok) throw new Error("Error sending message");
+
+    alert("Message sent successfully!");
+    e.target.reset();
+  } catch (err) {
+    console.error(err);
+    alert("Failed to send message");
+  }
+};
+
   
   // Datos de las tarjetas de información
   const infoData = [
@@ -101,12 +149,12 @@ export function ContactUsSection() {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="lg:col-span-2 p-8 md:p-12 bg-white rounded-3xl shadow-xl border border-gray-100 h-full"
         >
-        <form className="space-y-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
             
             {/* Inputs de nombre y correo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput id="name" label="Name" placeholder="John Doe" required className='text-gray-800'/>
-            <FormInput id="email" label="Email" placeholder="john@company.com" type="email" required className='text-gray-800'/>
+            <FormInput id="name" label="Name" placeholder="John Doe" required className='text-gray-800' defaultValue={fullName || ""} />
+            <FormInput id="email" label="Email" placeholder="john@company.com" type="email" required className='text-gray-800' defaultValue={email || ""}/>
             </div>
 
             {/* Empresa */}
