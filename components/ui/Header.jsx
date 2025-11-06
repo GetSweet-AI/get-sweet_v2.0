@@ -4,8 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion"; 
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/useContext";
 
 const Header = () => {
+  const { isAuthenticated, user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
@@ -77,8 +79,25 @@ const Header = () => {
           <Link href={sectionLink("use-cases")} className="text-gray-700 hover:text-black">Use cases</Link> 
           <Link href={sectionLink("pricing")} className="text-gray-700 hover:text-black">Pricing</Link> 
           <Link href={sectionLink("contact-us")} className="text-gray-700 hover:text-black">Contact us</Link> 
-          <Link href="/sign-in" className="text-gray-800 font-bold px-4 py-2 rounded-xl ml-6 hover:bg-gray-200 p-2">Sign In</Link> 
-          <Link href="/sign-up" className="px-4 py-2 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 text-white font-semibold hover:brightness-90 transition" > Get Started </Link> 
+          {isAuthenticated ? (
+                // Muestra el nombre y el botón de Sign Out
+                <>
+                    <span className="text-sm font-medium text-purple-900 mr-4">
+                        Hola, {user.fullName.split(' ')[0]}
+                    </span>
+                    <button onClick={logout} className="text-gray-800 font-bold px-4 py-2 rounded-xl ml-6 hover:bg-gray-200 p-2">
+                        Sign Out
+                    </button>
+                </>
+            ) : (
+                // Muestra los botones de Login/Sign Up
+                <>
+                  <Link href="/sign-in" className="text-gray-800 font-bold px-4 py-2 rounded-xl ml-6 hover:bg-gray-200 p-2">Sign In</Link> 
+                  <Link href="/sign-up" className="px-4 py-2 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 text-white font-semibold hover:brightness-90 transition" > Get Started </Link> 
+                </>
+            )}
+          
+          
         </nav>
 
         {/* Mobile Menu Button */}

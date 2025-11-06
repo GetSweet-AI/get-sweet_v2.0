@@ -5,7 +5,7 @@ import logo from "../../public/icons/logogetsweet.png";
 import { useState } from "react";
 
 const GOOGLE_ICON_URL = "https://www.svgrepo.com/show/475656/google-color.svg";
-const API_BASE_URL =  "https://backend-get-sweet-v2-0.onrender.com";
+const API_BASE_URL =  "https://backend-get-sweet-v2-0.onrender.com/api/v1";
 
 export default function SignUp() {
   const [form, setForm] = useState({
@@ -47,7 +47,7 @@ export default function SignUp() {
       setLoading(true);
       setMessage({ type: "", text: "" });
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

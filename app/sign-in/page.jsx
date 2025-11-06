@@ -4,7 +4,7 @@ import Image from "next/image";
 import logo from "../../public/icons/logogetsweet.png";
 import { useState } from "react";
 
-const API_BASE_URL = "https://backend-get-sweet-v2-0.onrender.com";
+const API_BASE_URL = "https://backend-get-sweet-v2-0.onrender.com/api/v1";
 const GOOGLE_ICON_URL = "https://www.svgrepo.com/show/475656/google-color.svg";
 
 export default function SignIn() {
@@ -29,7 +29,7 @@ export default function SignIn() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

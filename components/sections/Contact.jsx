@@ -2,35 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { Mail, Phone, MapPin, MessageCircleDashed } from 'lucide-react';
 import { motion } from 'framer-motion';
+import InfoCardContact from './InfoCardContact.jsx';
+import { useAuth } from '@/context/useContext';
 
-// --- Componente de Tarjeta de Información de Contacto ---
-const InfoCard = ({ icon: Icon, title, content, link, linkText }) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, amount: 0.5 }}
-      transition={{ duration: 0.5 }}
-      className="p-6 rounded-2xl bg-white shadow-lg flex items-start space-x-4 border border-gray-100 py-10 mb-4 lg:mb-0 "
-    >
-   
-      <div className="p-3 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 text-white shrink-0">
-        <Icon className="w-6 h-6" />
-      </div>
-      
-      {/* Contenido */}
-      <div>
-        <h4 className="text-lg font-semibold text-gray-800 mb-1">{title}</h4>
-        <p className="text-sm text-gray-600 mb-2">{content}</p>
-        {link && (
-          <a href={link} className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors">
-            {linkText}
-          </a>
-        )}
-      </div>
-    </motion.div>
-  );
-};
 
 // --- Componente de Input del Formulario ---
 const FormInput = ({ id, label, placeholder, type = 'text',required = false, className = '' }) => (
@@ -49,36 +23,28 @@ const FormInput = ({ id, label, placeholder, type = 'text',required = false, cla
 
 // --- Componente Principal de la Sección de Contacto ---
 export function ContactUsSection() {
-    const [token, setToken] = useState(null);
-    const [fullName, setFullName] = useState('');
-    const [email, setEmail] = useState('');
-
-    useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedName = localStorage.getItem('fullName');
-    const storedEmail = localStorage.getItem('email');
-
-    if (storedToken) setToken(storedToken);
-    if (storedName) setFullName(storedName);
-    if (storedEmail) setEmail(storedEmail);
-
-    }, []);
+  const { token, user, isAuthenticated } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
   e.preventDefault();
+
+  if (!isAuthenticated || !token) {
+    alert("Please login or register first!");
+    return;
+  }
 
   const name = e.target.name.value;
   const email = e.target.email.value;
   const company = e.target.company.value;
   const message = e.target.message.value;
 
-  if (!token) {
-    alert("Please login or register first!");
-    return;
-  }
+  setIsSubmitting(true);
 
   try {
-    const res = await fetch("https://backend-get-sweet-v2-0.onrender.com/api/v1/contact", {
+    const res = await fetch(
+      "https://backend-get-sweet-v2-0.onrender.com/api/v1/contact", 
+      {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -141,7 +107,7 @@ export function ContactUsSection() {
         {/* Contenedor de Formulario y Tarjetas de Info */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-stretch">
           
-                {/* Columna 1: Formulario de Contacto */}
+        {/* Columna 1: Formulario de Contacto */}
         <motion.div
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
@@ -153,8 +119,8 @@ export function ContactUsSection() {
             
             {/* Inputs de nombre y correo */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormInput id="name" label="Name" placeholder="John Doe" required className='text-gray-800' defaultValue={fullName || ""} />
-            <FormInput id="email" label="Email" placeholder="john@company.com" type="email" required className='text-gray-800' defaultValue={email || ""}/>
+            <FormInput id="name" label="Name" placeholder="John Doe" required className='text-gray-800' defaultValue={user?.fullName || ""} />
+            <FormInput id="email" label="Email" placeholder="john@company.com" type="email" required className='text-gray-800' defaultValue={user?.email || ""}/>
             </div>
 
             {/* Empresa */}
@@ -192,7 +158,7 @@ export function ContactUsSection() {
             className="lg:col-span-1 h-full flex flex-col justify-between "
             >
             {infoData.map((data, index) => (
-                <InfoCard 
+                <InfoCardContact 
                 key={index} 
                 {...data} 
                 
