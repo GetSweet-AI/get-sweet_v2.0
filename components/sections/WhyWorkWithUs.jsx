@@ -95,7 +95,7 @@ const FeaturesSection = () => {
           Why Work With Us
         </motion.h2>
         <motion.p
-          className="text-xl text-gray-500"
+          className="text-xl text-gray-500 mb-5"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -117,7 +117,7 @@ const FeaturesSection = () => {
             <motion.div
               key={index}
               variants={cardVariants}
-              className="p-8 mt-10 rounded-2xl border-2 bg-card hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-lg hover:border-purple-200"
+              className="p-8 rounded-2xl border-2 bg-card transition-all duration-300 hover:shadow-lg hover:border-purple-200 group hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50    "
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

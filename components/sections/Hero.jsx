@@ -76,7 +76,7 @@ const HeroSection = () => {
               Enterprise-Grade AI Ad Management
             </span>
             <br />
-            <span className=" text-gray-700">
+            <span className=" text-gray-900">
               The First Human in the loop AI Marketing Manager for all your
               marketing needs
             </span>

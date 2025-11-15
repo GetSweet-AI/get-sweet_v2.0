@@ -109,7 +109,7 @@ const UseCasesSection = () => {
           Built for Performance-Driven Growth Teams
         </motion.h2>
         <motion.p
-          className="text-xl text-gray-500"
+          className="text-xl text-gray-500 mb-5"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -130,7 +130,7 @@ const UseCasesSection = () => {
             <motion.div
               key={index}
               variants={cardVariants}
-              className="p-8 mt-10 rounded-2xl border-2 bg-white transition-all duration-300 hover:shadow-lg hover:border-purple-200 group"
+              className="p-8 rounded-2xl border-2 bg-white transition-all duration-300 hover:shadow-lg hover:border-purple-200 group"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}

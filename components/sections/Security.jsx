@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 import {
   FileText,
   Lock,
@@ -20,6 +21,7 @@ export default function EnterpriseSecurityComponent() {
     {
       icon: FileCheck,
       title: "SOC 2 / GDPR / HIPAA aligned",
+
       desc: "Full compliance with major security standards",
     },
     {
@@ -57,69 +59,95 @@ export default function EnterpriseSecurityComponent() {
   ];
 
   return (
-    <section className="bg-white py-16 px-6 sm:px-10 lg:px-24">
-      <div className="max-w-6xl mx-auto">
-        {/* Top label */}
-        <div className="flex justify-center">
-          <span className="inline-flex items-center rounded-full bg-pink-50/80 text-pink-700 px-4 py-1 text-sm font-medium ring-1 ring-pink-100">
-            <Shield className="w-4 h-4 text-pink-700 mr-2" />
-            Enterprise-Grade Security
-          </span>
+    <section
+      id="security"
+      className="py-24 bg-linear-to-b from-gray-50 to-white relative overflow-hidden"
+    >
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+      </div>
+
+      <div className="container mx-auto px-6 relative z-10">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <motion.div
+            className="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-purple-100 to-pink-100 rounded-full mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <Shield className="w-5 h-5 text-purple-600" />
+            <span className="text-sm text-purple-900">
+              Enterprise-Grade Security
+            </span>
+          </motion.div>
+
+          <motion.h2
+            className="text-4xl md:text-5xl mb-4 text-gray-900 font-semibold"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            Enterprise Security Built In
+          </motion.h2>
+          <motion.p
+            className="text-xl text-gray-600"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            Your data is protected by the same security measures used by Fortune
+            500 companies
+          </motion.p>
         </div>
 
-        {/* Title */}
-        <h2 className="mt-6 text-center text-4xl font-bold text-gray-900 tracking-tight">
-          Enterprise Security Built In
-        </h2>
-        <p className="mt-3 text-center text-gray-500 max-w-2xl mx-auto">
-          Your data is protected by the same security measures used by Fortune
-          500 companies
-        </p>
-
-        {/* Feature cards grid */}
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((f, idx) => {
-            const Icon = f.icon;
-            return (
-              <div
-                key={idx}
-                className="flex items-start gap-4 rounded-lg border border-gray-100 p-6 bg-white shadow-sm"
-              >
-                <div className="shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-linear-to-br from-pink-500 to-violet-500 inline-flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {features.map((feature, index) => (
+            <motion.div
+              key={index}
+              className="group relative p-6 rounded-2xl bg-white border border-gray-200 hover:border-purple-300 transition-all duration-300 hover:shadow-xl hover:shadow-purple-100"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.1 }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="shrink-0 w-10 h-10 rounded-lg bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <feature.icon className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium  text-gray-900">
-                    {f.title}
+                  <h3 className="text-base mb-2 text-gray-800">
+                    {feature.title}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-500">{f.desc}</p>
+                  <p className="text-sm text-gray-600">{feature.desc}</p>
                 </div>
               </div>
-            );
-          })}
+
+              <div className="absolute inset-0 rounded-2xl bg-linear-to-br from-purple-50/0 to-pink-50/0 group-hover:from-purple-50/50 group-hover:to-pink-50/50 transition-all duration-300 -z-10"></div>
+            </motion.div>
+          ))}
         </div>
 
-        {/* Divider */}
-        <div className="mt-12 border-t border-gray-100 pt-8">
-          <div className="max-w-3xl mx-auto flex items-center justify-center gap-10">
-            {trust.map((t, i) => {
-              const Icon = t.icon;
-              return (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-2 text-center"
-                >
-                  <div className="w-10 h-10 flex items-center justify-center rounded-md bg-white/40">
-                    <Icon className="w-5 h-5 text-blue-900" />
-                  </div>
-                  <span className="text-xs text-gray-500">{t.label}</span>
-                </div>
-              );
-            })}
+        <motion.div
+          className="pt-12 "
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+            {trust.map((item, index) => (
+              <div key={index} className="text-center flex items-center gap-2">
+                <item.icon className="w-6 h-6 text-purple-600 shrink-0" />
+                <p className="text-sm text-gray-800">{item.label}</p>
+              </div>
+            ))}
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
