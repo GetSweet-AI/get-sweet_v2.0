@@ -1,105 +1,107 @@
 "use client";
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
-
+import React from "react";
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 
 const plans = [
   {
-    name: "Starter",
-    tagline: "Perfect for individuals and small teams",
-    price: "$29",
+    name: "Essentials",
+    tagline:
+      "1 Active Campaign - Ideal for focused, single-channel initiatives",
+    price: "$300",
     isMonthly: true,
     isPopular: false,
     buttonText: "Start Free Trial",
     buttonType: "outline",
     features: [
-      "Up to 5 team members",
-      "10,000 AI credits/month",
-      "Basic analytics",
-      "Email support",
-      "Core integrations",
-      "Mobile app access",
-        ],
+      "One fully managed AI + human campaign",
+      "Audience + creative experimentation",
+      "Smart testing engine",
+      "Monthly strategist call",
+      "Core performance dashboard",
+      "Conversion recommendations",
+      "Light CRM/analytics integration",
+    ],
+    note: false,
   },
   {
-    name: "Professional",
-    tagline: "For growing teams and businesses",
-    price: "$99",
+    name: "Growth",
+    tagline: "5 Active Campaigns — For teams scaling across multiple channels",
+    price: "$1,200",
     isMonthly: true,
     isPopular: true,
     buttonText: "Start Free Trial",
     buttonType: "gradient",
     features: [
-      "Up to 25 team members",
-      "50,000 AI credits/month",
-      "Advanced analytics",
+      "Up to five fully managed campaigns",
+      "Multi-channel management (Meta, Google, TikTok, etc.)",
+      "Weekly strategist sessions",
+      "Advanced creative testing + variant modeling",
+      "Predictive performance insights",
+      "Deep integrations (CRM, analytics, e-commerce)",
       "Priority support",
-      "All integrations",
-      "Custom workflows",
-      "API access",
-      "Advanced security",
     ],
+    note: false,
   },
   {
     name: "Enterprise",
-    tagline: "For large organizations with custom needs",
-    price: "Contact Us",
+    tagline: "Unlimited Campaigns + Tailored AI Infrastructure",
+    price: "Custom Pricing",
     isMonthly: false,
-    buttonText: "Contact Sales",
+    buttonText: "Talk to Enterprise Sales",
     buttonType: "outline",
     features: [
-      "Unlimited team members",
-      "Unlimited AI credits",
-      "Custom analytics",
-      "24/7 dedicated support",
-      "Custom integrations",
-      "Advanced automation",
-      "SLA guarantee",
-      "White-label options",
-      "On-premise deployment",
+      "Unlimited campaigns",
+      "Dedicated strategist & AI analyst",
+      "Custom automations + workflow design",
+      "Full-stack integrations (CRM, CDP, ERP, Analytics)",
+      "Attribution modeling + data warehouse connectivity",
+      "Custom dashboards + BI tooling",
+      "Advanced compliance: SOC 2, HIPAA, GDPR",
+      "24/7 support + guaranteed SLAs",
+      "Multi-brand or multi-region environments",
+      "Global scaling and localization support",
     ],
+    note: "Pricing depends on team size, complexity, compliance needs, and systems integration requirements.",
   },
 ];
 
-
 const cardVariants = {
   hidden: { opacity: 0, y: 50 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
-    transition: { 
+    transition: {
       duration: 0.6,
-      ease: "easeOut" 
-    }
+      ease: "easeOut",
+    },
   },
 };
 
 // --- Componente de la Tarjeta de Precio ---
 const PricingCard = ({ plan, index }) => {
-  
   // Estilos del botón basados en el tipo
-  const buttonClasses = plan.buttonType === 'gradient'
-    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all"
-    : "bg-white text-gray-900 font-medium border border-gray-300 hover:border-purple-500 hover:shadow-md transition-all";
-    
+  const buttonClasses =
+    plan.buttonType === "gradient"
+      ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all"
+      : "bg-white text-gray-900 font-medium border border-gray-300 hover:border-purple-500 hover:shadow-md transition-all";
+
   // Estilos del borde para el plan popular
   const borderClasses = plan.isPopular
-    ? "border-2 border-transparent bg-clip-padding bg-origin-border" 
+    ? "border-2 border-transparent bg-clip-padding bg-origin-border"
     : "border border-gray-100";
-    
+
   // Clase para el contenedor del borde gradiente (simulación con un div extra)
-  const wrapperClasses = plan.isPopular 
-    ? "p-0.5 rounded-3xl bg-linear-to-br from-purple-500 to-pink-500 shadow-2xl" 
+  const wrapperClasses = plan.isPopular
+    ? "p-0.5 rounded-3xl bg-linear-to-br from-purple-500 to-pink-500 shadow-2xl"
     : "border border-gray-200 rounded-3xl";
 
   return (
-    <motion.div
-      variants={cardVariants}
-      className={wrapperClasses} 
-    >
-      <div 
-        className={`bg-white p-8 h-full rounded-3xl text-left flex flex-col transition-shadow duration-300 ${plan.isPopular ? 'p-7' : ''}`}
+    <motion.div variants={cardVariants} className={wrapperClasses}>
+      <div
+        className={`bg-white p-8 h-full rounded-3xl text-left flex flex-col transition-shadow duration-300 ${
+          plan.isPopular ? "p-7" : ""
+        }`}
       >
         {/* Etiqueta Popular */}
         {plan.isPopular && (
@@ -107,25 +109,19 @@ const PricingCard = ({ plan, index }) => {
             Most Popular
           </div>
         )}
-
         {/* Encabezado y Precio */}
         <div className="mt-8 mb-6">
           <h3 className="text-xl  text-gray-800">{plan.name}</h3>
           <p className="text-sm text-gray-500 mb-4">{plan.tagline}</p>
-          
-          <div className='flex items-baseline'>
-            <span className="text-4xl text-gray-900">
-                {plan.price}
-            </span>
+
+          <div className="flex items-baseline">
+            <span className="text-4xl text-gray-900">{plan.price}</span>
             {plan.isMonthly && (
-                <span className="text-lg font-medium text-gray-500">
-                    /month
-                </span>
+              <span className="text-lg font-medium text-gray-500">/month</span>
             )}
           </div>
         </div>
-
-     =
+        =
         <motion.button
           className={`w-full py-3 rounded-xl text-center mb-6 transition-all ${buttonClasses}`}
           whileHover={{ scale: 1.05 }}
@@ -133,7 +129,6 @@ const PricingCard = ({ plan, index }) => {
         >
           {plan.buttonText}
         </motion.button>
-
         {/* Lista de Características */}
         <ul className="space-y-4 grow">
           {plan.features.map((feature, i) => (
@@ -143,24 +138,26 @@ const PricingCard = ({ plan, index }) => {
             </li>
           ))}
         </ul>
+        <div className="mt-8 mb-6">
+          <p className="text-sm text-gray-500 mb-4">{plan.note}</p>
+        </div>
       </div>
     </motion.div>
   );
 };
 
-
 // --- Componente Principal ---
 export function PricingSection() {
   return (
-    <section id='pricing' className="py-30 bg-white">
+    <section id="pricing" className="py-30 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        
         {/* Títulos */}
-        <h2 className="text-4xl md:text-5xl font-semibold text-gray-900 mb-4">
-          Simple, Transparent Pricing
+        <h2 className="text-3xl md:text-5xl font-semibold text-gray-900 mb-4">
+          Pricing That Fits Your Scale and Complexity
         </h2>
         <p className="text-lg text-gray-600 mb-16">
-          Choose the perfect plan for your needs. All plans include a 14-day free trial.
+          Choose the level of support and managed AI that aligns with your
+          organization&apos;s needs.
         </p>
 
         {/* Grid de Precios */}
@@ -175,7 +172,6 @@ export function PricingSection() {
             <PricingCard key={plan.name} plan={plan} index={index} />
           ))}
         </motion.div>
-
       </div>
     </section>
   );

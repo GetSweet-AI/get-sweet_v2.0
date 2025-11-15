@@ -8,8 +8,8 @@ const infoData = [
     icon: Mail,
     title: "Email Us",
     content: "Our team is here to help",
-    link: "mailto:nathan@getsweet.ai",
-    linkText: "nathan@getsweet.ai",
+    link: "mailto:contact@thesweet.ai",
+    linkText: "contact@thesweet.ai",
   },
   {
     icon: MessageCircleDashed,

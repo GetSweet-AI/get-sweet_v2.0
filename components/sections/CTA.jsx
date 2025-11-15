@@ -1,16 +1,13 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ArrowRight, Star } from 'lucide-react';
+import React from "react";
+import { motion } from "framer-motion";
+import { ArrowRight, Star } from "lucide-react";
 
 export function CallToActionSection() {
   return (
     <section className="py-10 md:py-12 text-white text-center bg-linear-to-br from-purple-500 via-pink-600 to-indigo-500  -z-10">
- 
-      
       <div className="relative z-10 max-w-4xl mx-auto px-4">
-        
         {/* Banner de Oferta Limitada */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -24,35 +21,34 @@ export function CallToActionSection() {
 
         {/* Título Principal */}
         <h1 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
-          Ready to transform your workflow?
+          Your Team + Our AI = Predictable, Enterprise-Level Growth
         </h1>
 
         {/* Descripción */}
         <p className="text-lg md:text-xl text-white mb-10 max-w-3xl mx-auto">
-          Join 10,000+ teams already using GetSweet AI to work smarter and faster. Start your 14-day free trial today.
+          Let&apos;s build your next stage of scalable marketing performance.
         </p>
 
         {/* Contenedor de Botones */}
         <div className="flex justify-center items-center space-x-4 mb-6">
-          
           <motion.a
             href="/signup"
             className="inline-flex items-center px-8 py-3 rounded-xl font-semibold text-purple-700 bg-white shadow-lg transition-transform duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Start Free Trial
+            Book Enterprise Demo
             <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
           </motion.a>
 
           {/* Botón Secundario (Schedule a Demo) - Outline */}
           <motion.a
-            href="/demo"
+            href="#contact-us"
             className="inline-flex px-8 py-3 rounded-xl font-semibold text-white border-2 border-white/50 transition-colors duration-300 hover:bg-white/10"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            Schedule a Demo
+            Talk to a Strategist
           </motion.a>
         </div>
 

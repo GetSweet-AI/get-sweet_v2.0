@@ -10,22 +10,24 @@ import UseCasesSection from "@/components/sections/UseCases";
 import FeaturesSection from "@/components/sections/WhyWorkWithUs";
 import Header from "@/components/ui/Header";
 import Image from "next/image";
+import SecurityTrustSection from "@/components/sections/Security";
 
 export default function Home() {
   return (
-   <div>
-    <Header />
-    <HeroSection />
-    <StatsSection />
-    <FeaturesSection />
-    <HowItWorksSection />
-    <UseCasesSection />
-    <IntegrationsSection />
-    {/* <TestimonialsSection /> */}
-    <PricingSection />
-    <CallToActionSection />
-    <ContactUsSection />  
-    <Footer />
-   </div>
+    <div>
+      <Header />
+      <HeroSection />
+      <StatsSection />
+      <FeaturesSection />
+      <HowItWorksSection />
+      <UseCasesSection />
+      <IntegrationsSection />
+      {/* <TestimonialsSection /> */}
+      <PricingSection />
+      <SecurityTrustSection />
+      <CallToActionSection />
+      <ContactUsSection />
+      <Footer />
+    </div>
   );
 }
