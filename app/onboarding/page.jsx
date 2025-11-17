@@ -26,15 +26,29 @@ const industries = [
 
 export default function Onboarding() {
   const router = useRouter();
-  const { user, updateOnboarding } = useAuth();
+  const { user, updateOnboarding, loading } = useAuth();
 
   const [form, setForm] = useState({
     businessName: "",
     industry: "",
     phone: "",
   });
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+
+  if (loading) {
+    return (
+      <section className="flex flex-col justify-center items-center min-h-screen p-4">
+        <Loader2 className="animate-spin h-8 w-8 text-purple-600" />
+        <p className="mt-3 text-lg text-purple-600">Loading user data...</p>
+      </section>
+    );
+  }
+
+  if (!user) {
+    router.push("/sign-in");
+    return null;
+  }
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -42,7 +56,7 @@ export default function Onboarding() {
 
   const submitOnboarding = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     setMessage({ type: "", text: "" });
 
     try {
@@ -65,12 +79,11 @@ export default function Onboarding() {
           type: "error",
           text: data.message || "Profile update failed",
         });
-        setLoading(false);
+        setIsSubmitting(false);
         return;
       }
 
       updateOnboarding(data.user);
-
       setMessage({
         type: "success",
         text: "Profile completed! Redirecting...",
@@ -79,19 +92,19 @@ export default function Onboarding() {
     } catch (err) {
       setMessage({ type: "error", text: err.message || "Connection error" });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <section className="flex justify-center items-center min-h-screen p-4 bg-linear-to-b from-white via-purple-50 to-purple-100">
+    <section className="flex justify-center items-center min-h-screen p-4 bg-gradient-to-b from-white via-purple-50 to-purple-100">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, type: "spring", stiffness: 100 }}
-        className="bg-white/95 backdrop-blur-sm shadow-xl border border-purple-100 rounded-2xl p-6 md:p-10 w-full max-w-md text-center"
+        className="bg-white/95 backdrop-blur-sm shadow-lg border border-purple-100 rounded-2xl p-6 md:p-10 w-full max-w-md text-center"
       >
-        {/* Logo and Header */}
+        {/* Logo & Header */}
         <div className="flex flex-col items-center mb-6">
           <Image
             src={logo}
@@ -124,7 +137,7 @@ export default function Onboarding() {
             <label className="text-sm text-gray-700 font-semibold block mb-1">
               Business Name
             </label>
-            <Briefcase className="absolute left-3 top-10 h-5 w-5 text-purple-400" />
+            <Briefcase className="absolute left-3 top-9 h-5 w-5 text-purple-400" />
             <input
               id="businessName"
               name="businessName"
@@ -132,7 +145,7 @@ export default function Onboarding() {
               value={form.businessName}
               onChange={handleChange}
               placeholder="Ex: Sweet Digital Solutions"
-              className="w-full text-gray-800 border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+              className="text-gray-800 w-full border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
               required
             />
           </div>
@@ -142,7 +155,7 @@ export default function Onboarding() {
             <label className="text-sm text-gray-700 font-semibold block mb-1">
               Industry / Niche
             </label>
-            <Layers className="absolute left-3 top-10 h-5 w-5 text-purple-400" />
+            <Layers className="absolute left-3 top-9 h-5 w-5 text-purple-400" />
             <select
               id="industry"
               name="industry"
@@ -167,7 +180,7 @@ export default function Onboarding() {
             <label className="text-sm text-gray-700 font-semibold block mb-1">
               Contact Phone
             </label>
-            <Smartphone className="absolute left-3 top-10 h-5 w-5 text-purple-400" />
+            <Smartphone className="absolute left-3 top-9 h-5 w-5 text-purple-400" />
             <input
               id="phone"
               name="phone"
@@ -198,14 +211,14 @@ export default function Onboarding() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={isSubmitting}
             className={`w-full flex justify-center items-center gap-2 py-2.5 rounded-xl shadow font-bold text-white transition transform ${
-              loading
+              isSubmitting
                 ? "bg-purple-400 cursor-not-allowed"
                 : "bg-linear-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 active:scale-95"
             }`}
           >
-            {loading ? (
+            {isSubmitting ? (
               <Loader2 className="animate-spin h-5 w-5" />
             ) : (
               "Finish & Access Sweet AI"
