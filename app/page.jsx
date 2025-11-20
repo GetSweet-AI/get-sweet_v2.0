@@ -1,33 +1,11 @@
-import HowItWorksSection from "@/components/sections/HowItWorks";
-import ContactUsSection from "@/components/sections/Contact";
-import CallToActionSection from "@/components/sections/CTA";
-import Footer from "@/components/ui/Footer";
-import HeroSection from "@/components/sections/Hero";
-import IntegrationsSection from "@/components/sections/Integrations";
-import PricingSection from "@/components/sections/Pricing";
-import StatsSection from "@/components/sections/Stats";
-import UseCasesSection from "@/components/sections/UseCases";
-import FeaturesSection from "@/components/sections/WhyWorkWithUs";
-import Header from "@/components/ui/Header";
-import Image from "next/image";
-import SecurityTrustSection from "@/components/sections/Security";
+import ChatWindow from "@/components/chat/ChatWindow";
+import HeaderChat from "@/components/chat/ui/HeaderChat";
 
-export default function Home() {
+export default function ChatBot() {
   return (
     <div>
-      <Header />
-      <HeroSection />
-      <StatsSection />
-      <FeaturesSection />
-      <HowItWorksSection />
-      <UseCasesSection />
-      <IntegrationsSection />
-      {/* <TestimonialsSection /> */}
-      <PricingSection />
-      <SecurityTrustSection />
-      <CallToActionSection />
-      <ContactUsSection />
-      <Footer />
+      <HeaderChat />
+      <ChatWindow />
     </div>
   );
 }

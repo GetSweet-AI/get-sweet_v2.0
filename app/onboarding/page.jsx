@@ -97,7 +97,7 @@ export default function Onboarding() {
   };
 
   return (
-    <section className="flex justify-center items-center min-h-screen p-4 bg-gradient-to-b from-white via-purple-50 to-purple-100">
+    <section className="flex justify-center items-center min-h-screen p-4 bg-linear-to-b from-white via-purple-50 to-purple-100">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
