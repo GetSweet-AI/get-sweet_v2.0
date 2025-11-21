@@ -8,8 +8,6 @@ import { useAuth } from "@/context/useContext";
 import { Briefcase, Layers, Smartphone, Loader2 } from "lucide-react";
 import logo from "@/public/icons/logogetsweet.png";
 
-const BASE_URL = "https://backend-get-sweet-v2-0.onrender.com/api/v1";
-
 const industries = [
   "Restaurants",
   "E-commerce",
@@ -63,14 +61,17 @@ export default function Onboarding() {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("User not authenticated");
 
-      const res = await fetch(`${BASE_URL}/auth/onboarding`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/onboarding`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await res.json();
 

@@ -24,10 +24,10 @@ const NavLinks = ({
     }`}
   >
     <Link
-      href="/home"
+      href="/"
       onClick={() => isMobile && setMenuOpen(false)}
       className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg hover:bg-white/70 transition ${
-        pathname === "/home"
+        pathname === "/"
           ? "bg-white font-semibold text-purple-600 shadow-md"
           : "text-gray-700"
       }`}

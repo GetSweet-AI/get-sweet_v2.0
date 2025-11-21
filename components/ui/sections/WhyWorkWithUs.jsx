@@ -1,137 +1,142 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { Brain, Zap, Shield, Users, TrendingUp, Sparkles } from "lucide-react";
+import {
+  Target,
+  FileText,
+  PenTool,
+  ExternalLink,
+  Search,
+  RefreshCw,
+  Workflow,
+  BarChart2,
+} from "lucide-react";
 
 const featuresData = [
   {
-    icon: Brain,
-    title: "Intelligent Automation",
-    description:
-      "Advanced AI that learns from your workflow and automates repetitive tasks seamlessly.",
+    icon: Target,
+    title: "Value props & positioning",
+    description: "Clarify your core value and audience alignment.",
   },
   {
-    icon: Zap,
-    title: "Lightning Fast",
+    icon: FileText,
+    title: "PRDs & campaign blueprints",
     description:
-      "Process tasks 10x faster with our optimized AI engine built for performance.",
+      "Generate complete Product Requirement Docs (PRDs) and campaign outlines.",
   },
   {
-    icon: Shield,
-    title: "Enterprise Security",
-    description:
-      "Bank-level encryption and compliance with SOC 2, GDPR, and HIPAA standards.",
+    icon: PenTool,
+    title: "Ad copy, social content, landing pages",
+    description: "Autonomous generation of high-converting marketing assets.",
   },
   {
-    icon: Users,
-    title: "Team Collaboration",
-    description:
-      "Work together seamlessly with real-time collaboration and shared workspaces.",
+    icon: ExternalLink,
+    title: "Google/META/Amazon builds",
+    description: "Execute campaign builds across all major ad platforms.",
   },
   {
-    icon: TrendingUp,
-    title: "Analytics & Insights",
+    icon: Search,
+    title: "Listing optimization",
     description:
-      "Get actionable insights with powerful analytics and custom reporting dashboards.",
+      "AI-driven content and testing for Amazon, e-commerce, and app stores.",
   },
   {
-    icon: Sparkles,
-    title: "Smart Suggestions",
+    icon: RefreshCw,
+    title: "Automated A/B testing",
     description:
-      "AI-powered recommendations that help you make better decisions faster.",
+      "Continuous experimentation on creative, messaging, and budgets.",
+  },
+  {
+    icon: Workflow,
+    title: "Agentic workflows for multi-step tasks",
+    description:
+      "Workflows designed to complete full tasks from start to finish.",
+  },
+  {
+    icon: BarChart2,
+    title: "Performance tracking and insights",
+    description: "Real-time data visualization and deep performance analysis.",
   },
 ];
 
-// Variante para el contenedor de las tarjetas
+// Container animation
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
-// Variante para cada tarjeta individual
+// Card animation
 const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 24 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 12,
-    },
+    transition: { duration: 0.5, ease: "easeOut" },
   },
 };
 
-// Componente para el ícono con gradiente
 const GradientIcon = ({ Icon }) => (
-  <div className="relative p-3 rounded-xl shadow-lg bg-white">
-    <div
-      className="absolute inset-0 rounded-xl opacity-90"
-      style={{
-        background: "linear-gradient(135deg, #a78bfa 0%, #ec4899 100%)",
-      }}
-    ></div>
+  <div className="relative w-12 h-12 flex items-center justify-center rounded-2xl overflow-hidden shadow-md">
+    <div className="absolute inset-0 bg-linear-to-br from-purple-500 to-pink-500 opacity-90 group-hover:opacity-100 transition-opacity" />
     <Icon className="relative z-10 w-6 h-6 text-white" />
   </div>
 );
 
-const FeaturesSection = () => {
+const WhyWorkWithUs = () => {
   return (
     <section id="features" className="py-24 bg-white">
-      <div className=" mx-auto px-6 text-center max-w-7xl">
-        {/* Título y Subtítulo */}
+      <div className="max-w-7xl mx-auto px-6 text-center">
+        {/* Title */}
         <motion.h2
-          className="text-3xl md:text-5xl font-bold text-gray-900 mb-4"
+          className="text-4xl md:text-5xl font-bold text-gray-900 mb-6"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          Why Work With Us
+          What sweet AI handles
         </motion.h2>
+
+        {/* Subtitle */}
         <motion.p
-          className="text-xl text-gray-500 mb-5"
+          className="text-lg md:text-xl text-gray-600 mb-16 max-w-2xl mx-auto"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          Everything you need to supercharge your productivity and scale your
-          business
+          Every output goes through <strong>human-in-the-loop QA</strong>.
         </motion.p>
 
-        {/* Grid de Características */}
+        {/* Features Grid */}
         <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
+          viewport={{ once: true, amount: 0.2 }}
         >
           {featuresData.map((feature, index) => (
             <motion.div
               key={index}
               variants={cardVariants}
-              className="p-8 rounded-2xl border-2 bg-card transition-all duration-300 hover:shadow-lg hover:border-purple-200 group hover:bg-linear-to-br hover:from-purple-50 hover:to-pink-50    "
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              className="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-purple-300 hover:-translate-y-1"
             >
-              {/* Ícono con Gradiente */}
-              <div className="w-12 h-12 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 flex mb-4 group-hover:scale-110 transition-transform">
+              {/* Icon */}
+              <div className="mb-5">
                 <GradientIcon Icon={feature.icon} />
               </div>
 
-              <h3 className="flex mb-2 justify-items-start text-gray-900">
+              {/* Title */}
+              <h3 className="text-lg text-left font-semibold text-gray-900 mb-2 group-hover:text-purple-700 transition-colors">
                 {feature.title}
               </h3>
-              <p className="flex text-start justify-items-start text-gray-500">
+
+              {/* Description */}
+              <p className="text-sm text-left text-gray-600 leading-relaxed">
                 {feature.description}
               </p>
             </motion.div>
@@ -142,4 +147,4 @@ const FeaturesSection = () => {
   );
 };
 
-export default FeaturesSection;
+export default WhyWorkWithUs;

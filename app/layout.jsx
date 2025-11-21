@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/useContext";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,9 +15,9 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Get Sweet AI",
-  description: "Automate 100% of your social media content with GetSweet.AI. Create posts, schedule publications, and easily edit with our AI. Start generating quality content today!",
+  description:
+    "Automate 100% of your social media content with GetSweet.AI. Create posts, schedule publications, and easily edit with our AI. Start generating quality content today!",
 };
-
 
 export default function RootLayout({ children }) {
   return (
@@ -24,7 +25,11 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <GoogleOAuthProvider
+          clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+        >
+          <AuthProvider>{children}</AuthProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

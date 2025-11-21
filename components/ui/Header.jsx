@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/useContext";
 import { Menu, X } from "lucide-react";
 import { motion } from "framer-motion";
@@ -13,78 +13,89 @@ const NavLinks = ({
   logout,
   isMobile = false,
   setMenuOpen,
-}) => (
-  <nav
-    className={`flex ${isMobile ? "flex-col space-y-3" : "items-center gap-4"}`}
-  >
-    <Link
-      href="#features"
-      onClick={() => isMobile && setMenuOpen(false)}
-      className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
-    >
-      Features
-    </Link>
-    <Link
-      href="#how-it-works"
-      onClick={() => isMobile && setMenuOpen(false)}
-      className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
-    >
-      How it works
-    </Link>
-    <Link
-      href="#use-cases"
-      onClick={() => isMobile && setMenuOpen(false)}
-      className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
-    >
-      Use cases
-    </Link>
-    <Link
-      href="#pricing"
-      onClick={() => isMobile && setMenuOpen(false)}
-      className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
-    >
-      Pricing
-    </Link>
-    <Link
-      href="#contact-us"
-      onClick={() => isMobile && setMenuOpen(false)}
-      className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
-    >
-      Contact us
-    </Link>
+}) => {
+  const router = useRouter();
 
-    {isAuthenticated
-      ? isMobile && (
+  const handleClick = (href) => {
+    if (href.includes("#")) {
+      const [path, hash] = href.split("#");
+      if (path === router.pathname) {
+        // Scroll dentro de la misma página
+        const el = document.getElementById(hash);
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      } else {
+        // Navega a otra página + hash
+        router.push(href);
+      }
+    } else {
+      router.push(href);
+    }
+
+    if (isMobile) setMenuOpen(false);
+  };
+
+  return (
+    <nav
+      className={`flex ${
+        isMobile ? "flex-col space-y-3" : "items-center gap-4"
+      }`}
+    >
+      <button
+        onClick={() => handleClick("/#features")}
+        className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
+      >
+        Features
+      </button>
+      <button
+        onClick={() => handleClick("/#how-it-works")}
+        className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
+      >
+        How it works
+      </button>
+      <button
+        onClick={() => handleClick("/case-studies")}
+        className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
+      >
+        Case Studies
+      </button>
+      <button
+        onClick={() => handleClick("/contact-us")}
+        className="text-gray-700 hover:text-black px-3 py-2 rounded-lg transition"
+      >
+        Contact us
+      </button>
+
+      {isAuthenticated && isMobile ? (
+        <button
+          onClick={() => {
+            logout();
+            setMenuOpen(false);
+          }}
+          className="text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition text-left"
+        >
+          Sign Out
+        </button>
+      ) : null}
+
+      {!isAuthenticated && isMobile && (
+        <>
           <button
-            onClick={() => {
-              logout();
-              setMenuOpen(false);
-            }}
+            onClick={() => handleClick("/sign-in")}
             className="text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition text-left"
           >
-            Sign Out
+            Sign In
           </button>
-        )
-      : isMobile && (
-          <>
-            <Link
-              href="/sign-in"
-              onClick={() => setMenuOpen(false)}
-              className="text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-200 transition text-left"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/sign-up"
-              onClick={() => setMenuOpen(false)}
-              className="px-4 py-2 rounded-lg bg-linear-to-r from-purple-500 to-pink-500 text-white font-semibold hover:scale-105  transition text-left"
-            >
-              Get Started
-            </Link>
-          </>
-        )}
-  </nav>
-);
+          <button
+            onClick={() => handleClick("/sign-up")}
+            className="px-4 py-2 rounded-lg bg-linear-to-r from-purple-500 to-pink-500 text-white font-semibold hover:scale-105 transition text-left"
+          >
+            Get Started
+          </button>
+        </>
+      )}
+    </nav>
+  );
+};
 
 // --- MOBILE SIDEBAR ---
 const MobileSidebar = ({ isOpen, setMenuOpen, children }) => (
@@ -110,13 +121,26 @@ const MobileSidebar = ({ isOpen, setMenuOpen, children }) => (
 const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const [isMenuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Scroll automático al hash si existe
+  useEffect(() => {
+    if (pathname.includes("#")) {
+      const hash = pathname.split("#")[1];
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [pathname]);
 
   return (
     <>
       <header className="fixed top-0 w-full bg-white backdrop-blur-md shadow-lg z-50 border-b border-gray-100 px-6 py-3">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           {/* LOGO */}
-          <Link href="/home" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/icons/logogetsweet.png"
               alt="GetSweet Logo"
@@ -131,42 +155,38 @@ const Header = () => {
           {/* Desktop Nav */}
           <div className="hidden lg:flex items-center space-x-6">
             <NavLinks isAuthenticated={isAuthenticated} logout={logout} />
-            {/* Saludo desktop */}
             {isAuthenticated ? (
               <>
                 <span className="text-sm font-medium text-purple-900 mr-4">
                   Hey {user?.name?.split(" ")[0] || "user"}!
                 </span>
                 <button
-                  onClick={logout}
+                  onClick={() => logout()}
                   className="text-gray-800 font-bold px-4 py-2 rounded-xl ml-6 hover:bg-gray-200 p-2"
                 >
                   Sign Out
                 </button>
               </>
             ) : (
-              // Muestra los botones de Login/Sign Up
               <>
-                <Link
-                  href="/sign-in"
+                <button
+                  onClick={() => router.push("/sign-in")}
                   className="text-gray-800 font-bold px-4 py-2 rounded-xl ml-6 hover:bg-gray-200 p-2"
                 >
                   Sign In
-                </Link>
-                <Link
-                  href="/sign-up"
+                </button>
+                <button
+                  onClick={() => router.push("/sign-up")}
                   className="px-4 py-2 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 text-white font-semibold hover:scale-105 transition"
                 >
-                  {" "}
-                  Get Started{" "}
-                </Link>
+                  Get Started
+                </button>
               </>
             )}
           </div>
 
           {/* Mobile Hamburger */}
           <div className="flex lg:hidden items-center space-x-2">
-            {/* Saludo arriba siempre */}
             {isAuthenticated && user && (
               <span className="text-sm font-medium text-purple-900">
                 Hey {user?.name?.split(" ")[0]}!
