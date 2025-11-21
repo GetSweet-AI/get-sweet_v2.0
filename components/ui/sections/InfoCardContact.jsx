@@ -11,13 +11,13 @@ const infoData = [
     link: "mailto:contact@thesweet.ai",
     linkText: "contact@thesweet.ai",
   },
-  {
-    icon: MessageCircleDashed,
-    title: "Live Chat",
-    content: "Chat with our support team",
-    link: "#",
-    linkText: "Start a conversation",
-  },
+  // {
+  //   icon: MessageCircleDashed,
+  //   title: "Live Chat",
+  //   content: "Chat with our support team",
+  //   link: "#",
+  //   linkText: "Start a conversation",
+  // },
   {
     icon: Phone,
     title: "Schedule a Call",
@@ -63,7 +63,7 @@ const InfoCard = ({ icon: Icon, title, content, link, linkText }) => {
 // Renderiza todas las tarjetas
 export default function InfoCardContact() {
   return (
-    <div className="flex flex-col h-full justify-between">
+    <div className="flex flex-col justify-between md:gap-4">
       {infoData.map((data, index) => (
         <InfoCard key={index} {...data} />
       ))}{" "}

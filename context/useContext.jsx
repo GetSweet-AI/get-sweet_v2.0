@@ -1,15 +1,15 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from "react";
 
-const BASE_URL = "https://backend-get-sweet-v2-0.onrender.com/api/v1";
-
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [authState, setAuthState] = useState({
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    loading: true,
+  });
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -17,9 +17,19 @@ export const AuthProvider = ({ children }) => {
 
     if (storedToken && storedUser && storedUser !== "undefined") {
       try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        setIsAuthenticated(true);
+        const parsedUser = JSON.parse(storedUser);
+
+        // Evitar setState directo en el efecto
+        queueMicrotask(() => {
+          setAuthState({
+            user: parsedUser,
+            token: storedToken,
+            isAuthenticated: true,
+            loading: false,
+          });
+        });
+
+        return;
       } catch (error) {
         console.error("Error parsing stored user:", error);
         localStorage.removeItem("user");
@@ -27,33 +37,54 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    setLoading(false); // 👈 terminamos de inicializar
+    // También mover este
+    queueMicrotask(() => {
+      setAuthState((prev) => ({ ...prev, loading: false }));
+    });
   }, []);
 
+  // -------------------------
+  // LOGIN
+  // -------------------------
   const login = (userData, token) => {
-    if (userData && token) {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
-      setToken(token);
-      setIsAuthenticated(true);
-    }
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+
+    setAuthState({
+      user: userData,
+      token,
+      isAuthenticated: true,
+      loading: false,
+    });
   };
 
+  // -------------------------
+  // LOGOUT
+  // -------------------------
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    setUser(null);
-    setToken(null);
-    setIsAuthenticated(false);
+
+    setAuthState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      loading: false,
+    });
   };
 
+  // -------------------------
+  // REGISTER
+  // -------------------------
   const register = async ({ fullName, email, password }) => {
-    const response = await fetch(`${BASE_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fullName, email, password }),
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, password }),
+      }
+    );
 
     const data = await response.json();
 
@@ -61,23 +92,30 @@ export const AuthProvider = ({ children }) => {
       throw new Error(data.message || "Registration failed");
     }
 
-    // Iniciar sesión automáticamente después de registrarse
     login(data.user, data.token);
   };
 
+  // -------------------------
+  // UPDATE ONBOARDING
+  // -------------------------
   const updateOnboarding = (onboardingData) => {
-    // Actualiza el estado del usuario en el contexto
-    setUser((prevUser) => {
+    setAuthState((prev) => {
       const updatedUser = {
-        ...prevUser,
+        ...prev.user,
         ...onboardingData,
-        onboardingCompleted: true, // Asegúrate de marcarlo como completado
+        onboardingCompleted: true,
       };
-      // Actualiza también en el almacenamiento local
+
       localStorage.setItem("user", JSON.stringify(updatedUser));
-      return updatedUser;
+
+      return {
+        ...prev,
+        user: updatedUser,
+      };
     });
   };
+
+  const { user, token, isAuthenticated, loading } = authState;
 
   return (
     <AuthContext.Provider

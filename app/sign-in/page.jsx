@@ -1,11 +1,11 @@
-"use client"
+"use client";
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../public/icons/logogetsweet.png";
 import { useState } from "react";
 import { useAuth } from "@/context/useContext";
+import GoogleButton from "@/components/ui/GoogleButton";
 
-const API_BASE_URL = "https://backend-get-sweet-v2-0.onrender.com/api/v1";
 const GOOGLE_ICON_URL = "https://www.svgrepo.com/show/475656/google-color.svg";
 
 export default function SignIn() {
@@ -13,68 +13,73 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const handleBackToHome = () => {
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
-const { login } = useAuth();
+  const { login } = useAuth();
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  if (!email || !password) {
-    setError('Por favor, ingresa tu email y contraseña.');
-    setLoading(false);
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `Error del servidor (${response.status})`);
+    if (!email || !password) {
+      setError("Por favor, ingresa tu email y contraseña.");
+      setLoading(false);
+      return;
     }
 
-    console.log("Token:", data.token);
-    console.log("ID:", data._id);
-    console.log("Nombre:", data.fullName);
-    console.log("Email:", data.email);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-    // Guardar en contexto y localStorage
-    login(
-      {
-        id: data._id,
-        name: data.fullName,
-        email: data.email,
-        role: data.role,
-      },
-      data.token
-    );
+      const data = await response.json();
 
-    window.location.href = '/thank-u';
-  } catch (err) {
-    console.error("Error en el login:", err);
-    setError(err.message || 'No se pudo conectar al servidor.');
-  } finally {
-    setLoading(false);
-  }
-};
+      if (!response.ok) {
+        throw new Error(
+          data.message || `Error del servidor (${response.status})`
+        );
+      }
 
+      console.log("Token:", data.token);
+      console.log("ID:", data._id);
+      console.log("Nombre:", data.fullName);
+      console.log("Email:", data.email);
+
+      // Guardar en contexto y localStorage
+      login(
+        {
+          id: data._id,
+          name: data.fullName,
+          email: data.email,
+          role: data.role,
+        },
+        data.token
+      );
+
+      window.location.href = "/thank-u";
+    } catch (err) {
+      console.error("Error en el login:", err);
+      setError(err.message || "No se pudo conectar al servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <section 
-      className="relative flex justify-center items-center min-h-screen pt-16 pb-16 md:pt-24 md:pb-24" 
+    <section
+      className="relative flex justify-center items-center min-h-screen pt-16 pb-16 md:pt-24 md:pb-24"
       style={{
-        background: 'radial-gradient(circle at center top, #ffffff 0%, #ffffff 30%, #f3e8ff 70%, #d8b4fe 100%)',
+        background:
+          "radial-gradient(circle at center top, #ffffff 0%, #ffffff 30%, #f3e8ff 70%, #d8b4fe 100%)",
       }}
     >
       <button
@@ -101,31 +106,21 @@ const handleLogin = async (e) => {
           </div>
         </div>
 
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome Back
-        </h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h2>
         <p className="text-sm text-gray-500 mb-6">
           Sign in to continue to Get Sweet AI
         </p>
 
-        <button
-          className="w-full mb-4 flex items-center justify-center gap-3 border border-gray-300 bg-white hover:bg-gray-50 hover:shadow-lg transition duration-150 py-2.5 rounded-lg text-gray-700 font-semibold shadow-sm"
-        >
-          <Image
-            src={GOOGLE_ICON_URL}
-            alt="Google"
-            width={20}
-            height={20}
-            className="w-5 h-5"
-          />
-          Continue with Google
-        </button>
+        {/* Google Sign-In */}
+        {/* <GoogleButton redirectUrl="/thank-u" label="Continue with Google" />
 
         <div className="flex items-center my-6">
           <div className="flex-1 h-px bg-gray-200"></div>
-          <span className="px-3 text-sm text-gray-400">Or continue with email</span>
+          <span className="px-3 text-sm text-gray-400">
+            Or continue with email
+          </span>
           <div className="flex-1 h-px bg-gray-200"></div>
-        </div>
+        </div> */}
 
         <form className="space-y-4 text-left" onSubmit={handleLogin}>
           <div>
@@ -143,7 +138,9 @@ const handleLogin = async (e) => {
           </div>
 
           <div>
-            <label className="text-sm text-gray-700 font-medium">Password</label>
+            <label className="text-sm text-gray-700 font-medium">
+              Password
+            </label>
             <div className="relative mt-1">
               <Lock className="absolute left-3 top-2.5 h-5 w-5 text-purple-400" />
               <input
@@ -155,12 +152,12 @@ const handleLogin = async (e) => {
               />
             </div>
             <div className="text-right mt-2">
-              <a
+              {/* <a
                 href="#"
                 className="text-sm text-purple-600 hover:text-purple-700 font-medium transition duration-150"
               >
                 Forgot password?
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -168,26 +165,25 @@ const handleLogin = async (e) => {
             <p className="text-red-500 text-sm text-center mt-2">{error}</p>
           )}
 
-          <button 
+          <button
             type="submit"
             disabled={loading}
             className={`w-full transition duration-300 text-white font-semibold py-3 rounded-lg shadow-md mt-6 ${
-              loading 
-                ? 'bg-gray-400 cursor-not-allowed flex items-center justify-center' 
-                : 'bg-linear-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 hover:shadow-lg'
+              loading
+                ? "bg-gray-400 cursor-not-allowed flex items-center justify-center"
+                : "bg-linear-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700 hover:shadow-lg"
             }`}
           >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              'Sign In'
-            )}
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
           </button>
         </form>
 
         <p className="text-sm text-gray-500 mt-6">
           Don&apos;t have an account?{" "}
-          <a href="/sign-up" className="text-purple-600 hover:underline font-medium">
+          <a
+            href="/sign-up"
+            className="text-purple-600 hover:underline font-medium"
+          >
             Sign up for free
           </a>
         </p>

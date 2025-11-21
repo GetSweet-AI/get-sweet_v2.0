@@ -6,19 +6,21 @@ import { motion } from "framer-motion";
 import { Bot } from "lucide-react";
 
 const FloatingChatIcon = () => {
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== "undefined" ? window.innerWidth : 0,
+    height: typeof window !== "undefined" ? window.innerHeight : 0,
+  });
 
-  // Detectamos tamaño de ventana para dragConstraints
   useEffect(() => {
-    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-    const handleResize = () =>
+    const handleResize = () => {
       setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   return (
-    <Link href="/">
+    <Link href="/chat">
       <motion.div
         drag
         dragConstraints={{

@@ -1,7 +1,14 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { Twitter, Linkedin, Github, Youtube, Sparkles, Facebook } from "lucide-react";
+import {
+  Twitter,
+  Linkedin,
+  Github,
+  Youtube,
+  Sparkles,
+  Facebook,
+} from "lucide-react";
 import Image from "next/image";
 
 export default function Footer() {
@@ -9,7 +16,7 @@ export default function Footer() {
     "text-gray-400 hover:text-white transition-colors duration-300";
 
   return (
-    <footer className="bg-[#0B0B14] text-gray-400 py-16 border-t border-gray-800">
+    <footer className="bg-[#0B0B14] text-gray-400 py-16 border-t border-gray-800 ">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Top Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
@@ -26,8 +33,10 @@ export default function Footer() {
                 alt="GetSweet AI Logo"
                 width={32}
                 height={32}
-                />
-              <span className="text-lg font-semibold text-white">GetSweet AI</span>
+              />
+              <span className="text-lg font-semibold text-white">
+                GetSweet AI
+              </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-400 max-w-xs">
               Transforming businesses with intelligent AI automation. Work
@@ -44,10 +53,26 @@ export default function Footer() {
           >
             <h4 className="text-white font-semibold mb-4">Product</h4>
             <ul className="space-y-2">
-              <li><a href="#features" className={linkClasses}>Features</a></li>
-              <li><a href="#integrations" className={linkClasses}>Integrations</a></li>
-              <li><a href="#how-it-works" className={linkClasses}>How it works?</a></li>
-              <li><a href="#pricing" className={linkClasses}>Pricing</a></li>
+              <li>
+                <a href="#features" className={linkClasses}>
+                  Features
+                </a>
+              </li>
+              <li>
+                <a href="#integrations" className={linkClasses}>
+                  Integrations
+                </a>
+              </li>
+              <li>
+                <a href="#how-it-works" className={linkClasses}>
+                  How it works?
+                </a>
+              </li>
+              <li>
+                <a href="#pricing" className={linkClasses}>
+                  Pricing
+                </a>
+              </li>
             </ul>
           </motion.div>
 
@@ -60,10 +85,26 @@ export default function Footer() {
           >
             <h4 className="text-white font-semibold mb-4">Company</h4>
             <ul className="space-y-2">
-              <li><a href="#" className={linkClasses}>About Us</a></li>
-              <li><a href="#" className={linkClasses}>Careers</a></li>
-              <li><a href="#" className={linkClasses}>Blog</a></li>
-              <li><a href="#" className={linkClasses}>Press Kit</a></li>
+              <li>
+                <a href="#" className={linkClasses}>
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a href="#" className={linkClasses}>
+                  Careers
+                </a>
+              </li>
+              <li>
+                <a href="#" className={linkClasses}>
+                  Blog
+                </a>
+              </li>
+              <li>
+                <a href="#" className={linkClasses}>
+                  Press Kit
+                </a>
+              </li>
             </ul>
           </motion.div>
 
@@ -76,8 +117,16 @@ export default function Footer() {
           >
             <h4 className="text-white font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
-              <li><a href="/privacy-policy" className={linkClasses}>Privacy Policy</a></li>
-              <li><a href="/terms" className={linkClasses}>Terms of Service</a></li>
+              <li>
+                <a href="/privacy-policy" className={linkClasses}>
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="/terms" className={linkClasses}>
+                  Terms of Service
+                </a>
+              </li>
             </ul>
           </motion.div>
         </div>

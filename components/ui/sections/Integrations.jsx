@@ -1,9 +1,9 @@
 "use client";
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 import Image from "next/image";
 
+// Integrations
 const integrations = [
   {
     name: "Slack",
@@ -25,77 +25,100 @@ const integrations = [
     name: "Notion",
     logo: "https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png",
   },
-  { name: "Zapier", logo: "https://cdn.worldvectorlogo.com/logos/zapier.svg" },
+  {
+    name: "Zapier",
+    logo: "https://cdn.worldvectorlogo.com/logos/zapier.svg",
+  },
 ];
 
-// Variantes de Framer Motion para la animación de entrada
+//framer variants
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
+    transition: { staggerChildren: 0.1 },
   },
 };
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.45 } },
 };
 
-export function IntegrationsSection() {
+export default function IntegrationsSection() {
   return (
-    <section id="integrations" className="py-20 bg-white text-center">
-      <h2 className="text-3xl md:text-5xl font-semibold text-gray-900 mb-4 mx-2">
-        Integrates with your favorite tools
-      </h2>
-      <p className="text-lg text-gray-500 mb-16 mx-4">
-        Connect GetSweet AI with 100+ apps and services you already use
-      </p>
-
-      <motion.div
-        className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-6 gap-8 px-4"
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        {integrations.map((integration, index) => (
-          <motion.div
-            key={index}
-            variants={itemVariants}
-            className="py-2 rounded-full flex items-center justify-center bg-white border border-gray-100 shadow-md transition-all duration-300 hover:shadow-xl hover:border-gray-200 group"
-          >
-            {/* Contenedor del Logo */}
-            <div className="w-16 h-16 flex items-center justify-center p-2">
-              <Image
-                src={integration.logo}
-                alt={integration.name}
-                width={64}
-                height={64}
-                className="w-full h-full object-contain filter opacity-70 transition-all duration-300 group-hover:scale-105"
-              />
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      <div className="mt-16 text-center">
-        <p className="text-gray-500 mb-4 mx-2">
-          And 100+ more integrations via our API and Zapier
-        </p>
-
-        {/* <a
-          href="#"
-          className="inline-flex items-center text-purple-600 font-medium hover:text-purple-800 transition-colors"
+    <section
+      id="integrations"
+      className="py-24 bg-linear-to-b from-white to-gray-50"
+    >
+      <div className="text-center max-w-7xl mx-auto px-6">
+        {/* Title */}
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-3xl md:text-5xl font-bold text-gray-900 mb-4"
         >
-          View all integrations
-          <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
-        </a> */}
+          Seamlessly Integrates with Your Existing Stack
+        </motion.h2>
+
+        {/* Subtitle */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="text-xl text-gray-600 mb-16 max-w-3xl mx-auto"
+        >
+          Sweet AI connects with the CRMs, CDPs, ad platforms, and analytics
+          tools you already use.
+        </motion.p>
+
+        {/* Integrations Grid */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid grid-cols-3 md:grid-cols-6 gap-6 md:gap-10 max-w-5xl mx-auto"
+        >
+          {integrations.map((integration, index) => (
+            <motion.div
+              key={index}
+              variants={itemVariants}
+              className="p-4 rounded-2xl bg-white border border-gray-200 shadow-sm
+                         hover:shadow-xl hover:border-purple-300 hover:-translate-y-1
+                         transition-all duration-300 flex flex-col items-center group"
+            >
+              <div className="w-16 h-16 flex items-center justify-center mb-3">
+                <Image
+                  src={integration.logo}
+                  alt={integration.name}
+                  width={60}
+                  height={60}
+                  className="object-contain opacity-80 group-hover:opacity-100
+                             transition-all duration-300 group-hover:scale-110"
+                />
+              </div>
+
+              <p className="text-sm font-semibold text-gray-700">
+                {integration.name}
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* Bottom Text */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="text-lg text-gray-600 mt-20"
+        >
+          Full API connectivity and automated data flow for any system.
+        </motion.p>
       </div>
     </section>
   );
 }
-
-export default IntegrationsSection;
