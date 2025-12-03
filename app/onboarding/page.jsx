@@ -74,7 +74,6 @@ export default function Onboarding() {
         text: "Profile completed! Redirecting...",
       });
 
-<<<<<<< HEAD
       // La redirección ya la hace el contexto, pero por seguridad visual: //thank-u
       setTimeout(() => router.push("chat"), 1500);
     } catch (err) {
