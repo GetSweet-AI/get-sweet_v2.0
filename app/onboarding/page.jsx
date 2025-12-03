@@ -76,7 +76,7 @@ export default function Onboarding() {
       });
 
       // La redirección ya la hace el contexto, pero por seguridad visual:
-      setTimeout(() => router.push("home"), 1500); // O '/thank-u'
+      setTimeout(() => router.push("thank-u"), 1500); 
     } catch (err) {
       console.error(err);
       setMessage({
