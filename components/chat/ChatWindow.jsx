@@ -7,21 +7,40 @@ import TypingIndicator from "./TypingIndicator";
 import SuggestionChips from "./SuggestionChips";
 import ChatInput from "./ChatInput";
 import { useAuth } from "@/context/useContext";
+import ToneSelector from "./ui/ToneSelector";
 
 export default function ChatWindow({ activeContext }) {
   const { token, user } = useAuth();
+
+  // Estados
   const [guestId, setGuestId] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [extracted, setExtracted] = useState({});
+
+  // Extracted data (Estado de la verdad)
+  const [extracted, setExtracted] = useState({
+    mission: "",
+    vision: "",
+    values: [],
+    targetAudience: "",
+    tone: "Professional",
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // Tone state (UI)
+  const [showToneSelector, setShowToneSelector] = useState(false);
+  const [suggestedTone, setSuggestedTone] = useState(null);
+
   const scrollRef = useRef(null);
 
-  // === CORRECTO: ahora sí tomamos el _id del backend ===
+  // ID real del backend o guest
   const userId = user?._id || guestId;
+  const backendUrl = "https://backend-get-sweet-v2-0.onrender.com";
 
+  // --------------------------------------------------
   // Crear guest si no hay usuario
+  // --------------------------------------------------
   useEffect(() => {
     if (!user) {
       let gid = localStorage.getItem("guestId");
@@ -33,17 +52,13 @@ export default function ChatWindow({ activeContext }) {
     }
   }, [user]);
 
-  const backendUrl = "https://backend-get-sweet-v2-0.onrender.com";
-
-  // === Cargar historial desde backend ===
+  // --------------------------------------------------
+  // Cargar historial
+  // --------------------------------------------------
   useEffect(() => {
     const fetchHistory = async () => {
       if (!userId || userId.startsWith("guest-")) return;
-
-      if (!token) {
-        console.warn("⚠️ No hay token, no se puede cargar historial");
-        return;
-      }
+      if (!token) return;
 
       try {
         const res = await fetch(
@@ -58,18 +73,17 @@ export default function ChatWindow({ activeContext }) {
           }
         );
 
-        if (res.status === 401) {
-          console.error("⚠️ Token inválido o expirado");
-          return;
-        }
-
         if (!res.ok) throw new Error("Failed to fetch chat history");
 
         const data = await res.json();
 
         setMessages(
           Array.isArray(data)
-            ? data.map((m) => ({ id: m.id, role: m.role, text: m.content }))
+            ? data.map((m) => ({
+                id: m.id || crypto.randomUUID(),
+                role: m.role,
+                text: m.content,
+              }))
             : []
         );
       } catch (err) {
@@ -80,37 +94,84 @@ export default function ChatWindow({ activeContext }) {
     fetchHistory();
   }, [userId, token, activeContext]);
 
+  // --------------------------------------------------
   // Scroll automático
+  // --------------------------------------------------
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, showToneSelector]);
 
-  // === Manejar envío del usuario ===
+  // --------------------------------------------------
+  // LÓGICA DE SELECCIÓN DE TONO (Acción del Usuario)
+  // --------------------------------------------------
+  const handleToneSelect = async (selectedTone) => {
+    // 1. Actualización optimista (UI inmediata)
+    setExtracted((prev) => ({ ...prev, tone: selectedTone }));
+    setSuggestedTone(selectedTone); // Dejarlo marcado visualmente
+
+    try {
+      // 2. Guardar en Backend
+      const res = await fetch(`${backendUrl}/api/v1/company/tone`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tone: selectedTone }),
+      });
+
+      if (!res.ok) throw new Error("Error updating tone");
+
+      // 3. Feedback visual: Cerrar tras éxito
+      // Opcional: Podrías usar un setTimeout si quieres que el usuario vea el click
+      setTimeout(() => setShowToneSelector(false), 500);
+    } catch (err) {
+      console.error("Failed to update tone:", err);
+      // Revertir si falla (opcional)
+    }
+  };
+
+  // --------------------------------------------------
+  // Envío de mensajes
+  // --------------------------------------------------
   const handleSend = useCallback(
     async (text) => {
-      if (!text) return;
+      if (!text || !text.trim()) return;
 
       setIsLoading(true);
       setError("");
 
-      const userMsg = { id: crypto.randomUUID(), role: "user", text };
+      // Limpieza de estados de UI anteriores
+      setShowToneSelector(false);
+      setSuggestedTone(null); // <--- IMPORTANTE: Limpiar sugerencias viejas
+
+      // 1️⃣ Mostrar mensaje del usuario inmediatamente
+      const userMsg = {
+        id: crypto.randomUUID(),
+        role: "user",
+        text,
+      };
       setMessages((prev) => [...prev, userMsg]);
 
-      // === Si es guest, solo responde un mensaje dummy ===
+      // 2️⃣ Guest → respuesta dummy
       if (!userId || userId.startsWith("guest-")) {
-        const fakeReply = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: "Thanks! Please register to unlock full AI capabilities.",
-        };
-        setTimeout(() => setMessages((prev) => [...prev, fakeReply]), 500);
-        setIsLoading(false);
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              text: "Thanks! Please register to unlock full AI capabilities.",
+            },
+          ]);
+          setIsLoading(false);
+        }, 500);
         return;
       }
 
-      // === Usuario registrado ===
+      // 3️⃣ Usuario autenticado
       try {
-        if (!token) throw new Error("No autorizado, token vacío");
+        if (!token) throw new Error("No autorizado");
 
         const res = await fetch(`${backendUrl}/api/v1/chat/message`, {
           method: "POST",
@@ -120,38 +181,48 @@ export default function ChatWindow({ activeContext }) {
           },
           body: JSON.stringify({
             userId,
-            userMessage: text || "",
+            userMessage: text,
             campaignId: activeContext !== "general" ? activeContext : null,
           }),
         });
-        console.log("JWT enviado al backend:", token);
 
         const data = await res.json();
 
-        if (res.status === 401) {
-          setError("Tu sesión expiró. Inicia sesión de nuevo.");
-          return;
+        if (!res.ok) {
+          throw new Error(data.error || "Error en el servidor");
         }
 
-        if (!res.ok) throw new Error(data.error || "Error en el servidor");
+        // 4️⃣ Respuesta del asistente
+        const replyText = typeof data.reply === "string" ? data.reply : "";
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            text: replyText,
+          },
+        ]);
 
-        const replyText =
-          typeof data.reply === "string"
-            ? data.reply
-            : JSON.stringify(data.reply || "");
+        // 5️⃣ Actualizar Datos Confirmados (Si vienen del backend)
+        // Nota: El backend ya no envía 'tone' aquí a menos que sea el guardado en DB
+        if (data.companyData) {
+          setExtracted((prev) => ({
+            ...prev,
+            ...data.companyData,
+          }));
+        }
 
-        const assistantMsg = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: replyText,
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
-
-        if (data.extracted) setExtracted(data.extracted);
+        // 6️⃣ DETECCIÓN DE INTENCIÓN DE CAMBIO DE TONO
+        // El backend envía: { triggerToneSelector: true, suggestedTone: "Friendly" }
+        if (data.triggerToneSelector) {
+          setShowToneSelector(true);
+          if (data.suggestedTone) {
+            setSuggestedTone(data.suggestedTone);
+          }
+        }
       } catch (err) {
-        console.error("❌ Error enviando mensaje:", err);
-        setError(err.message);
+        console.error("❌ Error:", err);
+        setError("Error de conexión o respuesta del servidor.");
       } finally {
         setIsLoading(false);
       }
@@ -159,28 +230,28 @@ export default function ChatWindow({ activeContext }) {
     [userId, token, activeContext]
   );
 
-  const hasConversation = messages.some(
-    (m) => m.role === "assistant" || m.role === "user"
-  );
+  const hasConversation = messages.length > 0;
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
   return (
     <div className="flex flex-col h-full w-full bg-white">
-      {/* Scroll Area */}
+      {/* Área de mensajes */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-6 space-y-6">
         {!hasConversation ? (
           <div className="flex flex-col h-full items-center justify-center text-center p-4">
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-blue-600">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-blue-600 p-1">
               Ready to grow your business?
             </h1>
-            <p className="text-gray-600 text-lg max-w-xl mb-10">
-              I&apos;m Sweet Manager — your AI marketing partner. Tell me your
-              brand name to begin.
+            <p className="text-gray-600 text-lg max-w-xl mb-10 mt-2">
+              I&apos;m Sweet Manager — your AI marketing partner.
             </p>
 
             <SuggestionChips
               suggestions={[
                 "I want my brand to go viral",
-                "Create a mission, vision and goals",
+                "Create a mission, vision and values",
                 "I don't have a brand name yet",
               ]}
               onSelect={handleSend}
@@ -188,7 +259,12 @@ export default function ChatWindow({ activeContext }) {
           </div>
         ) : (
           <>
-            {extracted?.mission || extracted?.vision || extracted?.goals ? (
+            {/* ADN Detectado */}
+            {(extracted.mission ||
+              extracted.vision ||
+              (Array.isArray(extracted.values) &&
+                extracted.values.length > 0) ||
+              extracted.targetAudience) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -196,47 +272,73 @@ export default function ChatWindow({ activeContext }) {
                 className="pb-6 border-b border-gray-100 mb-6"
               >
                 <div className="bg-purple-50/50 border border-purple-200 rounded-lg p-4 shadow-sm">
-                  <h4 className="text-sm font-bold text-purple-700 mb-2 flex items-center gap-2">
-                    💡 Estrategia Detectada
+                  <h4 className="text-sm font-bold text-purple-700 mb-2">
+                    💡 Brand DNA Detected
                   </h4>
                   <div className="text-xs text-gray-700 space-y-2">
                     {extracted.mission && (
                       <p>
-                        <span className="font-semibold">Misión:</span>{" "}
-                        {extracted.mission}
+                        <strong>Misión:</strong> {extracted.mission}
                       </p>
                     )}
                     {extracted.vision && (
                       <p>
-                        <span className="font-semibold">Visión:</span>{" "}
-                        {extracted.vision}
+                        <strong>Visión:</strong> {extracted.vision}
                       </p>
                     )}
-                    {extracted.goals && (
+                    {Array.isArray(extracted.values) &&
+                      extracted.values.length > 0 && (
+                        <p>
+                          <strong>Valores:</strong>{" "}
+                          {extracted.values.join(", ")}
+                        </p>
+                      )}
+                    {extracted.targetAudience && (
                       <p>
-                        <span className="font-semibold">Metas:</span>{" "}
-                        {extracted.goals}
+                        <strong>Audiencia:</strong> {extracted.targetAudience}
                       </p>
                     )}
                   </div>
                 </div>
               </motion.div>
-            ) : null}
+            )}
 
-            {/* Messages */}
+            {/* Mensajes */}
             <div className="space-y-6">
               {messages.map((m) => (
                 <MessageBubble key={m.id} sender={m.role} text={m.text} />
               ))}
+
               {isLoading && <TypingIndicator />}
-              <div ref={scrollRef} className="h-1" />
+
+              {/* SELECTOR DE TONO */}
+              {showToneSelector && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="ml-2 md:ml-10 max-w-[90%]"
+                >
+                  <div className="mb-2 text-xs font-semibold text-purple-600">
+                    {suggestedTone
+                      ? `¿Cambiar a tono ${suggestedTone}?`
+                      : "Ajustar tono:"}
+                  </div>
+                  <ToneSelector
+                    // Si hay sugerencia, mostramos esa. Si no, mostramos el actual.
+                    currentTone={suggestedTone || extracted.tone}
+                    onSelect={handleToneSelect}
+                  />
+                </motion.div>
+              )}
+
+              <div ref={scrollRef} />
             </div>
           </>
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 pb-2 border-t border-gray-100 bg-white sticky bottom-0 z-50 shadow-lg">
+      {/* Input */}
+      <div className="p-4 border-t border-gray-100 bg-white sticky bottom-0 z-50">
         <div className="max-w-4xl mx-auto">
           {error && (
             <div className="mb-2 p-2 bg-red-50 text-red-600 text-xs rounded text-center border border-red-100">
@@ -247,6 +349,7 @@ export default function ChatWindow({ activeContext }) {
           <div className="bg-white rounded-xl shadow-md p-2 border border-gray-200">
             <ChatInput onSend={handleSend} isTyping={isLoading} />
           </div>
+
           <p className="text-center text-[10px] text-gray-400 mt-2">
             Sweet Manager can make mistakes
           </p>

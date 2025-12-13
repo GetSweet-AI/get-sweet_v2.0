@@ -1,102 +1,71 @@
-import { useState, useCallback } from "react";
+"use client";
+import { useState, useRef, useEffect } from "react";
+import { Send } from "lucide-react";
 
-/**
- * useChat Hook
- * @param {string} userId - ID del usuario o guest
- * @param {string|null} token - Token JWT del usuario logueado (NextAuth)
- * @param {string|null} campaignId - Contexto de campaña
- */
-export default function useChat({ userId, token, campaignId }) {
-  const [messages, setMessages] = useState([]);
-  const [extracted, setExtracted] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+export default function ChatInput({ onSend, isTyping }) {
+  const [text, setText] = useState("");
+  const textareaRef = useRef(null);
 
-  const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-  const sendMessage = useCallback(
-    async (text) => {
-      if (!text) return;
-
-      try {
-        setIsLoading(true);
-        setError("");
-
-        // 1️⃣ UI Optimista: mostrar mensaje del usuario
-        const userMsg = { id: crypto.randomUUID(), role: "user", text };
-        setMessages((prev) => [...prev, userMsg]);
-
-        // 2️⃣ Manejo de usuarios invitados
-        if (!userId || userId.startsWith("guest-")) {
-          const fakeReply = {
-            id: crypto.randomUUID(),
-            role: "assistant",
-            text: "Thanks! Please register to unlock full AI capabilities.",
-          };
-          setTimeout(() => setMessages((prev) => [...prev, fakeReply]), 500);
-          return;
-        }
-
-        // 3️⃣ Preparar headers con token
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-        else throw new Error("No autorizado, no hay token");
-
-        // 4️⃣ Enviar mensaje al backend
-        const response = await fetch(`https://backend-get-sweet-v2-0.onrender.com/api/v1/chat/message`, {
-          method: "POST",
-          
-  headers: { Authorization: `Bearer ${token}`,
-          body: JSON.stringify({
-            userId,
-            userMessage: text,
-            campaignId: campaignId || null,
-            history: messages.slice(-12),
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || data.message || "Error en el servidor");
-        }
-
-        // 5️⃣ Respuesta del asistente
-        const assistantMsg = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: data.message || data.reply,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-
-        if (data.extracted) setExtracted(data.extracted);
-      } catch (err) {
-        console.error("Chat Error:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [userId, token, BASE_URL, campaignId, messages]
-  );
-
-  // Inicializar mensajes (historial del backend)
-  const initMessages = useCallback((msgs) => {
-    if (!Array.isArray(msgs)) return;
-    const formatted = msgs.map((m) => ({
-      id: m._id || crypto.randomUUID(),
-      role: m.role,
-      text: m.text || m.content || "",
-    }));
-    setMessages(formatted);
-  }, []);
-
-  return {
-    messages,
-    extracted,
-    isLoading,
-    error,
-    sendMessage,
-    initMessages,
+  const handleSend = () => {
+    if (!text.trim() || isTyping) return;
+    onSend(text);
+    setText("");
   };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Auto-resize hasta 7 líneas
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    const lineHeight = 20;
+    const maxHeight = lineHeight * 7;
+    textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + "px";
+  }, [text]);
+
+  const canSend = text.trim().length > 0 && !isTyping;
+
+  return (
+    <div className="w-full py-4 flex items-center gap-3">
+      {/* Textarea */}
+      <div className="bg-gray-100 flex items-center flex-1 rounded-2xl px-4 py-2">
+        <textarea
+          ref={textareaRef}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            isTyping
+              ? "Sweet Manager is generating a response..."
+              : "Ask Sweet Manager anything..."
+          }
+          rows={1}
+          className="md:px-2 flex-1 bg-transparent outline-none resize-none text-base text-gray-700 placeholder-gray-400 leading-6 max-h-[168px] overflow-y-auto"
+        />
+      </div>
+
+      {/* Botón de enviar */}
+      <button
+        onClick={handleSend}
+        disabled={!canSend}
+        className={`
+          w-10 h-10 flex items-center justify-center rounded-full shadow-md transition
+          ${
+            !canSend
+              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+              : "bg-linear-to-r from-fuchsia-500 to-purple-600 text-white hover:opacity-90 transition hover:scale-105"
+          }
+        `}
+      >
+        <Send className="w-5 h-5" />
+      </button>
+    </div>
+  );
 }
