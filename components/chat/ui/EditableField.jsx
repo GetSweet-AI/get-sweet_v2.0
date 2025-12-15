@@ -19,13 +19,13 @@ export const EditableField = ({
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full text-sm p-2 border border-gray-300 rounded
+        className="w-full text-[13px] p-2 border border-gray-300 rounded-lg
           focus:border-blue-500 outline-none bg-white text-gray-800 transition"
       />
     ) : (
-      <div className="text-[14px] text-gray-600 font-medium wrap-break-word">
+      <div className="text-[12px] text-gray-600 font-medium wrap-break-word">
         {value || (
-          <span className="text-gray-300 italic text-xs">Not defined</span>
+          <span className="text-gray-300 italic text-[12px]">null</span>
         )}
       </div>
     )}

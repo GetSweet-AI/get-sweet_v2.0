@@ -73,7 +73,7 @@ export function ContactUsSection() {
 
     try {
       const res = await fetch(
-        "https://backend-get-sweet-v2-0.onrender.com/api/v1/contact",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/contact`,
         {
           method: "POST",
           headers: {
