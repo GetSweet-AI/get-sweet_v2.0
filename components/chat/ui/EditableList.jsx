@@ -21,7 +21,7 @@ export const EditableList = ({
         }
         rows={2}
         placeholder="Separate items with commas"
-        className="w-full text-xs p-2 border rounded outline-none
+        className="w-full text-xs p-2 border rounded-lg outline-none
           bg-indigo-50/40 border-indigo-300 text-gray-600"
       />
     );

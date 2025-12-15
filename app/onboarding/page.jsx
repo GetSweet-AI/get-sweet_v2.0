@@ -5,37 +5,37 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/useContext";
-import { Briefcase, Layers, Smartphone, Loader2 } from "lucide-react";
+import {
+  Briefcase,
+  Layers,
+  Smartphone,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 import logo from "../../public/icons/logogetsweet.png";
-
-const industries = [
-  "Restaurants",
-  "E-commerce",
-  "Consulting",
-  "Software Development",
-  "Digital Marketing",
-  "Health & Wellness",
-  "Education",
-  "Real Estate",
-  "Financial Services",
-  "Transportation / Logistics",
-  "Tourism & Hospitality",
-];
+import { INDUSTRIES } from "@/components/utils/industries";
+// Asegúrate de que la ruta sea correcta según tu estructura
+import { COUNTRIES } from "@/components/utils/countries";
 
 export default function Onboarding() {
   const router = useRouter();
-
   const { user, updateOnboarding, loading } = useAuth();
 
+  // Estado: Separamos el código del número para mejor manejo
   const [form, setForm] = useState({
     businessName: "",
     industry: "",
-    phone: "",
+    phoneNumber: "",
+    countryCode: "+1", // Valor inicial por defecto
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // Redirección si no hay usuario (pero esperamos a que termine de cargar)
+  // Buscar el objeto del país seleccionado para mostrar su SVG
+  const selectedCountry =
+    COUNTRIES.find((c) => c.dial_code === form.countryCode) || COUNTRIES[0];
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/sign-in");
@@ -51,7 +51,6 @@ export default function Onboarding() {
     );
   }
 
-  // Si no hay usuario, retornamos null mientras el useEffect redirige
   if (!user) return null;
 
   const handleChange = (e) => {
@@ -63,11 +62,17 @@ export default function Onboarding() {
     setIsSubmitting(true);
     setMessage({ type: "", text: "" });
 
+    // Combinar Código + Número antes de enviar
+    const fullPhone = `${form.countryCode} ${form.phoneNumber}`;
+
+    const payload = {
+      businessName: form.businessName,
+      industry: form.industry,
+      phone: fullPhone, // El backend espera 'phone'
+    };
+
     try {
-      // ✅ CAMBIO CLAVE:
-      // En lugar de hacer fetch manual y buscar el token en localStorage (que fallaba),
-      // llamamos a la función del Contexto. Ella ya tiene el token de Google.
-      await updateOnboarding(form);
+      await updateOnboarding(payload);
 
       setMessage({
         type: "success",
@@ -143,7 +148,7 @@ export default function Onboarding() {
           {/* Industry */}
           <div className="relative">
             <label className="text-sm text-gray-700 font-semibold block mb-1">
-              Industry / Niche
+              Industry
             </label>
             <Layers className="absolute left-3 top-9 h-5 w-5 text-purple-400" />
             <select
@@ -151,36 +156,80 @@ export default function Onboarding() {
               name="industry"
               value={form.industry}
               onChange={handleChange}
-              className="text-gray-800 w-full border appearance-none border-gray-300 rounded-xl py-2.5 pl-10 pr-10 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+              className="text-gray-800 w-full border appearance-none border-gray-300 rounded-xl py-2.5 pl-10 pr-10 text-sm bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition cursor-pointer"
               required
             >
               <option value="" disabled>
                 Select an industry
               </option>
-              {industries.map((ind) => (
+              {INDUSTRIES.map((ind) => (
                 <option key={ind} value={ind}>
                   {ind}
                 </option>
               ))}
             </select>
+            <div className="absolute right-3 top-9 pointer-events-none text-gray-400">
+              <ChevronDown className="h-4 w-4" />
+            </div>
           </div>
 
-          {/* Phone */}
-          <div className="relative">
+          {/* Phone Section (Mejorado con SVG) */}
+          <div>
             <label className="text-sm text-gray-700 font-semibold block mb-1">
               Contact Phone
             </label>
-            <Smartphone className="absolute left-3 top-9 h-5 w-5 text-purple-400" />
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="+1 123 456 7890"
-              className="text-gray-800 w-full border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
-              required
-            />
+            <div className="flex gap-2">
+              {/* Selector de País */}
+              <div className="relative w-[35%]">
+                {/* 1. Imagen SVG del país seleccionado (Visible cuando está cerrado) */}
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 flex items-center gap-1">
+                  {selectedCountry && (
+                    <Image
+                      src={selectedCountry.image}
+                      alt={selectedCountry.name}
+                      width={5}
+                      height={5}
+                      className="w-6 h-4 object-cover rounded-sm shadow-sm"
+                    />
+                  )}
+                </div>
+
+                {/* 2. El Select Real (Texto con padding para no tapar la imagen) */}
+                <select
+                  name="countryCode"
+                  value={form.countryCode}
+                  onChange={handleChange}
+                  className="w-full h-full border border-gray-300 rounded-xl py-2.5 pl-11 pr-6 text-sm bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none appearance-none cursor-pointer text-gray-800 font-medium"
+                >
+                  {COUNTRIES.map((c, index) => (
+                    <option key={`${c.code}-${index}`} value={c.dial_code}>
+                      {c.emoji} {c.dial_code}{" "}
+                      {/* En el dropdown usamos emoji nativo */}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Flechita */}
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <ChevronDown className="h-3 w-3" />
+                </div>
+              </div>
+
+              {/* Input Numérico */}
+              <div className="relative w-[65%]">
+                <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-purple-400" />
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  value={form.phoneNumber}
+                  onChange={handleChange}
+                  placeholder="123 456 7890"
+                  className="text-gray-800 w-full border border-gray-300 rounded-xl py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {/* Messages */}

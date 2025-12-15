@@ -18,7 +18,7 @@ export const EditableTextArea = ({
         onChange={(e) => onChange(e.target.value)}
         rows={4}
         placeholder={placeholder}
-        className="w-full text-[12px] p-2 border rounded outline-none resize-none
+        className="w-full text-[12px] p-2 border rounded-lg outline-none resize-none
           bg-indigo-50/40 border-indigo-300 text-gray-600"
       />
     ) : (

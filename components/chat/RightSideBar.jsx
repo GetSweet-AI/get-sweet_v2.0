@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Layout, X, Save, Loader2 } from "lucide-react";
+import { Layout, X, Save, Loader2, PlusCircle, Sparkles } from "lucide-react";
 import { useCompany } from "@/context/CompanyContext";
 import { useAuth } from "@/context/useContext";
 import { SidebarSection } from "./ui/SidebarSection";
@@ -9,10 +9,15 @@ import { EditableField } from "./ui/EditableField";
 import { EditableTextArea } from "./ui/EditableTextArea";
 import { EditableList } from "./ui/EditableList";
 import { EditableColorPalette } from "./ui/EditableColorPalette";
+import { EditableSelect } from "./ui/EditableSelect";
+import { INDUSTRIES } from "../utils/industries";
+import CreateCampaignModal from "./modals/CreateCampaignModal";
 
 export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
   const { companyData, updateCompanyState, loading } = useCompany();
   const { token } = useAuth();
+
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
 
   /* ---------------- UI SECTIONS ---------------- */
   const [sections, setSections] = useState({
@@ -55,6 +60,18 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
     stopEditingAll();
   };
 
+  // Verifica si los campos críticos tienen contenido
+  const isBrandReady =
+    companyData?.brandName?.length > 0 &&
+    companyData?.industry?.length > 0 &&
+    companyData?.targetAudience?.length > 5 &&
+    companyData?.mission?.length > 5;
+  companyData?.vision?.length > 5;
+  companyData?.services?.length > 5;
+  companyData?.diff?.length > 5;
+  companyData?.tone?.length > 2;
+  companyData?.brandVoice?.length > 4;
+
   /* ---------------- SAVE ---------------- */
   const handleSave = async () => {
     setIsSaving(true);
@@ -74,7 +91,7 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
 
     try {
       const res = await fetch(
-        "https://backend-get-sweet-v2-0.onrender.com/api/v1/company/profile",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/profile`,
         {
           method: "PUT",
           headers: {
@@ -88,6 +105,7 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
       if (!res.ok) throw new Error("Save failed");
 
       const json = await res.json();
+      // Ajuste por si el backend devuelve data o companyData
       const updated = json.data || json.companyData;
 
       updateCompanyState(updated);
@@ -123,7 +141,7 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
   return (
     <>
       <div
-        className={`fixed inset-y-0 right-0 z-50 w-80 bg-gray-50 border-l flex flex-col transition-transform
+        className={`fixed inset-y-0 right-0 z-50 w-80 bg-gray-50 border-l flex flex-col transition-transform duration-300 ease-in-out
         ${
           isOpen ? "translate-x-0" : "translate-x-full"
         } lg:relative lg:translate-x-0`}
@@ -184,6 +202,42 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
         <div className="p-5 space-y-8 overflow-y-auto flex-1">
           {activeContext === "general" && (
             <>
+              <div className="space-y-2">
+                {isBrandReady ? (
+                  // OPCIÓN A: MARCA LISTA -> SUGERIR CAMPAÑA
+                  <div className="p-4 bg-green-50 border border-green-100 rounded-xl shadow-sm">
+                    <h4 className="text-xs font-bold text-green-800 mb-2 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Ready for Action!
+                    </h4>
+                    <p className="text-xs text-green-700 leading-snug mb-3">
+                      Your Brand Identity is solid. It&apos;s time to launch
+                      your first marketing campaign to reach that target
+                      audience.
+                    </p>
+                    <button
+                      onClick={() => setIsCampaignModalOpen(true)}
+                      className="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      <PlusCircle className="w-3 h-3" />
+                      Create First Campaign
+                    </button>
+                  </div>
+                ) : (
+                  // OPCIÓN B: MARCA INCOMPLETA -> SUGERIR COMPLETAR
+                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                    <h4 className="text-xs font-bold text-blue-800 mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Sweet suggestions
+                    </h4>
+                    <p className="text-xs text-blue-600 leading-snug">
+                      Verify your brand profile (Mission, Vision & Target
+                      Audience). Once completed, you can start creating
+                      AI-powered campaigns.
+                    </p>
+                  </div>
+                )}
+              </div>
               {/* INFO */}
               <SidebarSection
                 title="Info"
@@ -199,6 +253,7 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
                   onChange={(val) => handleChange("brandName", val)}
                   placeholder="Your official business name"
                 />
+
                 <EditableField
                   label="Alias / AKA"
                   value={formData.aka}
@@ -207,13 +262,42 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
                   forceLabel
                   placeholder="Sweet Manager"
                 />
+
+                {/* 👇 INTEGRACIÓN DEL SELECT MODERNO */}
+                {isEditing("info") ? (
+                  <EditableSelect
+                    label="Industry"
+                    value={formData.industry}
+                    options={INDUSTRIES}
+                    isEditing={true}
+                    onChange={(val) => handleChange("industry", val)}
+                    placeholder="Select Industry"
+                  />
+                ) : (
+                  <EditableField
+                    label="Industry"
+                    value={formData.industry}
+                    isEditing={false} // Modo lectura
+                    forceLabel
+                  />
+                )}
+
                 <EditableField
-                  label="Industry"
-                  value={formData.industry}
+                  label="Target Audience"
+                  value={formData.targetAudience}
                   isEditing={isEditing("info")}
-                  onChange={(val) => handleChange("industry", val)}
+                  onChange={(val) => handleChange("targetAudience", val)}
                   forceLabel
-                  placeholder="Saas, Marketing"
+                  placeholder="Women aged 25-40"
+                />
+
+                <EditableField
+                  label="website"
+                  value={formData.website}
+                  isEditing={isEditing("info")}
+                  onChange={(val) => handleChange("website", val)}
+                  forceLabel
+                  placeholder="https://getsweet.ai"
                 />
               </SidebarSection>
 
@@ -277,7 +361,7 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
               >
                 <EditableList
                   items={formData.values}
-                  isEditing={isEditing("values")}
+                  isEditing={isEditing("voice")}
                   onChange={(val) => handleChange("values", val)}
                 />
               </SidebarSection>
@@ -303,10 +387,14 @@ export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
       {/* Overlay mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 lg:hidden"
+          className="fixed inset-0 bg-black/20 lg:hidden z-40 backdrop-blur-sm"
           onClick={() => setIsOpen(false)}
         />
       )}
+      <CreateCampaignModal
+        isOpen={isCampaignModalOpen}
+        onClose={() => setIsCampaignModalOpen(false)}
+      />
     </>
   );
 }

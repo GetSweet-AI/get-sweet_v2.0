@@ -7,10 +7,13 @@ import {
   X,
   LogOut,
   User,
+  Plus,
 } from "lucide-react";
 import { useAuth } from "@/context/useContext";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; // 1. Importamos useRouter
+import { useRouter } from "next/navigation";
+import CreateCampaignModal from "./modals/CreateCampaignModal";
+import { useCallback, useEffect, useState } from "react";
 
 export default function LeftSidebar({
   isOpen,
@@ -18,29 +21,56 @@ export default function LeftSidebar({
   activeContext,
   setActiveContext,
 }) {
-  const { user, logout } = useAuth();
-  const router = useRouter(); // 2. Inicializamos el router
+  const { user, logout, token } = useAuth();
+  const router = useRouter();
+
+  const [campaigns, setCampaigns] = useState([]);
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
 
   // Helper para iniciales
   const getInitials = (name) => {
     return name ? name.substring(0, 2).toUpperCase() : "U";
   };
 
-  // 3. FUNCIÓN DE NAVEGACIÓN INTELIGENTE
+  const getCampaignsList = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setCampaigns(data);
+      }
+    } catch (err) {
+      console.error("Error fetching campaigns:", err);
+    }
+  };
+
+  // 2. USE EFFECT: Cargar al inicio o al cambiar el token
+  useEffect(() => {
+    getCampaignsList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // Solo dependemos del token, rompemos el ciclo
+
+  // 3. HANDLER PARA REFRESCAR (Usado al cerrar el modal)
+  const handleCampaignCreated = () => {
+    getCampaignsList(); // Recargamos la lista manualmente
+    setIsCampaignModalOpen(false); // Cerramos modal
+  };
+
   const handleNavigation = (contextId) => {
-    // Si setActiveContext existe, significa que estamos en /chat
     if (typeof setActiveContext === "function") {
       setActiveContext(contextId);
     } else {
-      // Si no existe (estamos en /settings), forzamos la navegación
       router.push("/chat");
     }
 
-    // Cerramos el menú móvil si está abierto
     if (setIsOpen) setIsOpen(false);
   };
-
-  console.log("CONTEXT USER:", user);
 
   return (
     <>
@@ -52,7 +82,6 @@ export default function LeftSidebar({
         `}
       >
         <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          {/* Cambiamos div por button y agregamos onClick */}
           <button
             onClick={() => (window.location.href = "/chat")}
             className="flex items-center gap-2 cursor-pointer transition-opacity"
@@ -80,7 +109,7 @@ export default function LeftSidebar({
 
           <nav className="space-y-1 px-2">
             <button
-              onClick={() => handleNavigation("general")} // 4. Usamos el handler
+              onClick={() => handleNavigation("general")}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeContext === "general"
                   ? "bg-purple-600 text-white"
@@ -91,7 +120,7 @@ export default function LeftSidebar({
               Chat General
             </button>
             <button
-              onClick={() => router.push("/settings")} // Navegación directa
+              onClick={() => router.push("/settings")}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
             >
               <Settings className="w-4 h-4" />
@@ -99,33 +128,48 @@ export default function LeftSidebar({
             </button>
           </nav>
 
+          {/* SECCIÓN DE CAMPAÑAS */}
           <div className="mt-8 px-4 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
-            <span>Mis Campañas</span>
-            <button className="hover:text-white text-lg leading-none transition-colors">
-              +
+            <span>My campaigns</span>
+            <button
+              onClick={() => setIsCampaignModalOpen(true)}
+              // className="hover:text-white text-lg leading-none transition-colors">
+              className="hover:text-white text-slate-400 transition-colors p-1 rounded hover:bg-slate-800"
+            >
+              <Plus className="w-4 h-4" />
             </button>
           </div>
 
           <nav className="space-y-1 px-2">
-            <button
-              onClick={() => handleNavigation("campaign_1")} // 4. Usamos el handler
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeContext === "campaign_1"
-                  ? "bg-purple-600 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Rocket className="w-4 h-4" />
-                Navidad 2025
-              </div>
-              {activeContext === "campaign_1" && (
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              )}
-            </button>
+            {campaigns.length === 0 ? (
+              <p className="px-3 text-xs text-slate-600 italic">
+                No campaigns yet.
+              </p>
+            ) : (
+              campaigns.map((camp) => (
+                <button
+                  key={camp._id}
+                  onClick={() => handleNavigation(camp._id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeContext === camp._id
+                      ? "bg-purple-600 text-white"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <Rocket className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{camp.name}</span>
+                  </div>
+                  {activeContext === camp._id && (
+                    <div className="w-2 h-2 bg-green-500 rounded-full shrink-0"></div>
+                  )}
+                </button>
+              ))
+            )}
           </nav>
         </div>
 
+        {/* Footer de Usuario*/}
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -180,6 +224,11 @@ export default function LeftSidebar({
           onClick={() => setIsOpen(false)}
         ></div>
       )}
+
+      <CreateCampaignModal
+        isOpen={isCampaignModalOpen}
+        onClose={() => handleCampaignCreated()}
+      />
     </>
   );
 }

@@ -3,16 +3,12 @@ import { useEffect, useRef } from "react";
 import MessageBubble from "./MessageBubble.jsx"; // Asumimos que esta ruta es correcta
 
 /**
- * Componente que renderiza la lista de mensajes y maneja el auto-scroll.
  * @param {Object} props
  * @param {Array<Object>} props.messages - Arreglo de objetos de mensajes.
  */
 export default function MessageList({ messages }) {
   const endRef = useRef(null);
-
-  // Efecto para hacer scroll al final cada vez que la lista de mensajes cambia
   useEffect(() => {
-    // Usamos requestAnimationFrame para asegurar que el DOM se haya renderizado antes del scroll
     requestAnimationFrame(() => {
       endRef.current?.scrollIntoView({ behavior: "smooth" });
     });

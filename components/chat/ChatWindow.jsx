@@ -36,7 +36,6 @@ export default function ChatWindow({ activeContext }) {
 
   // ID real del backend o guest
   const userId = user?._id || guestId;
-  const backendUrl = "https://backend-get-sweet-v2-0.onrender.com";
 
   // --------------------------------------------------
   // Crear guest si no hay usuario
@@ -62,7 +61,9 @@ export default function ChatWindow({ activeContext }) {
 
       try {
         const res = await fetch(
-          `${backendUrl}/api/v1/chat/history/${userId}?campaignId=${
+          `${
+            process.env.NEXT_PUBLIC_API_URL
+          }/api/v1/chat/history/${userId}?campaignId=${
             activeContext !== "general" ? activeContext : ""
           }`,
           {

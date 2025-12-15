@@ -22,6 +22,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "www.hubspot.com",
       },
+      {
+        protocol: "https",
+        hostname: "https://cdn.jsdelivr.net",
+      },
     ],
   },
 };
