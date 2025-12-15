@@ -1,400 +1,297 @@
+// components/chat/RightSideBar.jsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Layout, X, Save, Loader2, PlusCircle, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Layout, X, ExternalLink, Loader2, Tag, Target } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCompany } from "@/context/CompanyContext";
-import { useAuth } from "@/context/useContext";
-import { SidebarSection } from "./ui/SidebarSection";
-import { EditableField } from "./ui/EditableField";
-import { EditableTextArea } from "./ui/EditableTextArea";
-import { EditableList } from "./ui/EditableList";
-import { EditableColorPalette } from "./ui/EditableColorPalette";
-import { EditableSelect } from "./ui/EditableSelect";
-import { INDUSTRIES } from "../utils/industries";
-import CreateCampaignModal from "./modals/CreateCampaignModal";
 
-export default function RightSidebar({ isOpen, setIsOpen, activeContext }) {
-  const { companyData, updateCompanyState, loading } = useCompany();
-  const { token } = useAuth();
+/**
+ * RightSidebar
+ * - Campaign view: tabs (Campaign | Brand)
+ * - Sidebar is read-only; "Edit" opens full-page views
+ * - Campaign data is loaded from localStorage for now
+ *
+ * Expected localStorage shape (either is fine):
+ *  A) campaigns = [{ _id|id, name, objective, primaryGoal, successMetric, timeframe, channel }]
+ *  B) campaignsById = { [id]: { ...campaign } }
+ */
+export default function RightSidebar({
+  isOpen,
+  setIsOpen,
+  activeContext,
+  mode = "campaign", // "campaign" | "brand"
+  campaignId,
+}) {
+  const router = useRouter();
+  const { companyData, loading: companyLoading } = useCompany();
 
-  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [tab, setTab] = useState(mode === "campaign" ? "campaign" : "brand");
+  const [campaign, setCampaign] = useState(null);
 
-  /* ---------------- UI SECTIONS ---------------- */
-  const [sections, setSections] = useState({
-    info: true,
-    mission: false,
-    services: false,
-    diff: false,
-    voice: false,
-    trust: false,
-    colors: false,
-  });
-
-  const toggleSection = (key) =>
-    setSections((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  /* ---------------- EDITING STATE ---------------- */
-  const [editingSection, setEditingSection] = useState(null);
-  const isEditing = (key) => editingSection === key;
-  const hasEditing = Boolean(editingSection);
-
-  const stopEditingAll = () => setEditingSection(null);
-
-  /* ---------------- FORM STATE ---------------- */
-  const [formData, setFormData] = useState({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState(null);
-
+  // Keep tab sensible if caller changes mode
   useEffect(() => {
-    if (companyData) setFormData(companyData);
-  }, [companyData]);
+    setTab(mode === "campaign" ? "campaign" : "brand");
+  }, [mode]);
 
-  const hasChanges = JSON.stringify(formData) !== JSON.stringify(companyData);
+  // Load campaign from localStorage (front-end only)
+  useEffect(() => {
+    if (mode !== "campaign") return;
 
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCancel = () => {
-    setFormData(companyData);
-    stopEditingAll();
-  };
-
-  // Verifica si los campos críticos tienen contenido
-  const isBrandReady =
-    companyData?.brandName?.length > 0 &&
-    companyData?.industry?.length > 0 &&
-    companyData?.targetAudience?.length > 5 &&
-    companyData?.mission?.length > 5;
-  companyData?.vision?.length > 5;
-  companyData?.services?.length > 5;
-  companyData?.diff?.length > 5;
-  companyData?.tone?.length > 2;
-  companyData?.brandVoice?.length > 4;
-
-  /* ---------------- SAVE ---------------- */
-  const handleSave = async () => {
-    setIsSaving(true);
-    setToast(null);
-
-    const dataToSave = Object.entries(formData).reduce((acc, [key, value]) => {
-      if (typeof value === "string") {
-        const trimmed = value.trim();
-        if (trimmed) acc[key] = trimmed;
-      } else if (Array.isArray(value)) {
-        acc[key] = value
-          .map((v) => (typeof v === "string" ? v.trim() : v))
-          .filter(Boolean);
-      }
-      return acc;
-    }, {});
+    const id = String(campaignId || activeContext || "");
+    if (!id) return;
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/company/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(dataToSave),
+      const byIdRaw = localStorage.getItem("campaignsById");
+      if (byIdRaw) {
+        const byId = JSON.parse(byIdRaw);
+        if (byId && byId[id]) {
+          setCampaign({ id, ...byId[id] });
+          return;
         }
-      );
+      }
 
-      if (!res.ok) throw new Error("Save failed");
+      const listRaw = localStorage.getItem("campaigns");
+      if (listRaw) {
+        const list = JSON.parse(listRaw);
+        const found =
+          Array.isArray(list) &&
+          list.find((c) => String(c?._id || c?.id) === id);
 
-      const json = await res.json();
-      // Ajuste por si el backend devuelve data o companyData
-      const updated = json.data || json.companyData;
+        if (found) {
+          setCampaign({ ...found, id });
+          return;
+        }
+      }
 
-      updateCompanyState(updated);
-      stopEditingAll();
-
-      setToast({
-        type: "success",
-        message: "Your changes have been saved.",
-      });
-
-      setTimeout(() => setToast(null), 2000);
-    } catch (err) {
-      console.error(err);
-      setToast({
-        type: "error",
-        message: "Failed to save changes. Please try again.",
-      });
-      setTimeout(() => setToast(null), 2000);
-    } finally {
-      setIsSaving(false);
+      // fallback
+      setCampaign({ id, name: "Untitled campaign" });
+    } catch {
+      setCampaign({ id, name: "Untitled campaign" });
     }
+  }, [mode, campaignId, activeContext]);
+
+  const brandName = useMemo(
+    () => companyData?.brandName || "Your brand",
+    [companyData]
+  );
+
+  const close = () => setIsOpen?.(false);
+
+  const goBrandFullPage = () => {
+    // ✅ Full page brand details / confirm screen (you’ll create this page)
+    router.push("/chat/brand-details");
+    close();
   };
 
-  /* ---------------- LOADING ---------------- */
-  if (loading) {
-    return (
-      <div className="fixed inset-y-0 right-0 w-80 bg-white border-l flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  const goCampaignFullPage = () => {
+    const id = String(campaignId || activeContext || "");
+    if (!id) return;
+    router.push(`/chat/campaign/${id}/edit`);
+    close();
+  };
+
+  const showCampaignUI = mode === "campaign";
 
   return (
-    <>
-      <div
-        className={`fixed inset-y-0 right-0 z-50 w-80 bg-gray-50 border-l flex flex-col transition-transform duration-300 ease-in-out
-        ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        } lg:relative lg:translate-x-0`}
-      >
-        {/* HEADER */}
-        <div className="h-16 border-b flex items-center justify-between px-5 bg-white sticky top-0 z-10">
-          <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-            <Layout className="w-4 h-4 text-blue-500" />
-            Brand Details
+    <div
+      className={`fixed inset-y-0 right-0 z-50 w-80 bg-gray-50 border-l flex flex-col transition-transform
+      ${isOpen ? "translate-x-0" : "translate-x-full"} lg:relative lg:translate-x-0`}
+    >
+      {/* HEADER */}
+      <div className="h-16 border-b flex items-center justify-between px-5 bg-white sticky top-0 z-10">
+        <div className="flex items-center gap-2 min-w-0">
+          <Layout className="w-4 h-4 text-blue-500" />
+          <h3 className="font-semibold text-gray-700 truncate">
+            {showCampaignUI ? "Context" : "Brand Details"}
           </h3>
-
-          {hasEditing ? (
-            <div className="flex gap-3">
-              <button
-                onClick={handleCancel}
-                className="text-sm text-gray-500 hover:text-red-600"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!hasChanges || isSaving}
-                className="flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded-lg text-sm font-semibold disabled:bg-gray-400"
-              >
-                {isSaving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Save
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsOpen(false)}
-              className="lg:hidden text-gray-400 hover:bg-gray-100 p-1 rounded-full"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
         </div>
 
-        {/* TOAST */}
-        {toast && (
-          <div
-            className={`mx-4 mt-3 px-4 py-2 rounded-lg text-sm font-medium border
-            ${
-              toast.type === "success"
-                ? "bg-green-50 text-green-700 border-green-200"
-                : "bg-red-50 text-red-700 border-red-200"
-            }`}
-          >
-            {toast.message}
+        <button
+          onClick={close}
+          className="lg:hidden text-gray-400 hover:bg-gray-100 p-1 rounded-full"
+          aria-label="Close right sidebar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* TABS (campaign view only) */}
+      {showCampaignUI && (
+        <div className="px-4 pt-4">
+          <div className="bg-white border border-gray-200 rounded-xl p-1 flex">
+            <button
+              onClick={() => setTab("campaign")}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold transition ${
+                tab === "campaign"
+                  ? "bg-gray-900 text-white"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Campaign
+            </button>
+            <button
+              onClick={() => setTab("brand")}
+              className={`flex-1 h-9 rounded-lg text-sm font-semibold transition ${
+                tab === "brand"
+                  ? "bg-gray-900 text-white"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              Brand
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENT */}
+      <div className="p-4 space-y-4 overflow-y-auto flex-1">
+        {/* CAMPAIGN TAB */}
+        {showCampaignUI && tab === "campaign" && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500">Campaign</div>
+                <div className="text-base font-semibold text-gray-900 truncate">
+                  {campaign?.name || "Untitled campaign"}
+                </div>
+                <div className="mt-1 text-xs text-gray-500 truncate">
+                  ID: {String(campaign?.id || campaignId || activeContext || "")}
+                </div>
+              </div>
+
+              <button
+                onClick={goCampaignFullPage}
+                className="shrink-0 h-9 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 inline-flex items-center gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Edit
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <InfoRow
+                icon={Target}
+                label="Objective"
+                value={campaign?.objective || "Not set"}
+              />
+              <InfoRow
+                icon={Tag}
+                label="Primary goal"
+                value={campaign?.primaryGoal || "Not set"}
+              />
+              <InfoRow
+                label="Success metric"
+                value={campaign?.successMetric || "Not set"}
+              />
+              <InfoRow
+                label="Timeframe"
+                value={
+                  campaign?.timeframe || campaign?.goalTimeframe || "Not set"
+                }
+              />
+              <InfoRow
+                label="Primary channel"
+                value={campaign?.channel || "Not set"}
+              />
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs text-gray-500 leading-snug">
+                This sidebar is read-only. Use <b>Edit</b> to update campaign
+                details in the full-page editor.
+              </div>
+            </div>
           </div>
         )}
 
-        {/* CONTENT */}
-        <div className="p-5 space-y-8 overflow-y-auto flex-1">
-          {activeContext === "general" && (
-            <>
-              <div className="space-y-2">
-                {isBrandReady ? (
-                  // OPCIÓN A: MARCA LISTA -> SUGERIR CAMPAÑA
-                  <div className="p-4 bg-green-50 border border-green-100 rounded-xl shadow-sm">
-                    <h4 className="text-xs font-bold text-green-800 mb-2 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      Ready for Action!
-                    </h4>
-                    <p className="text-xs text-green-700 leading-snug mb-3">
-                      Your Brand Identity is solid. It&apos;s time to launch
-                      your first marketing campaign to reach that target
-                      audience.
-                    </p>
-                    <button
-                      onClick={() => setIsCampaignModalOpen(true)}
-                      className="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <PlusCircle className="w-3 h-3" />
-                      Create First Campaign
-                    </button>
-                  </div>
-                ) : (
-                  // OPCIÓN B: MARCA INCOMPLETA -> SUGERIR COMPLETAR
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                    <h4 className="text-xs font-bold text-blue-800 mb-1 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      Sweet suggestions
-                    </h4>
-                    <p className="text-xs text-blue-600 leading-snug">
-                      Verify your brand profile (Mission, Vision & Target
-                      Audience). Once completed, you can start creating
-                      AI-powered campaigns.
-                    </p>
-                  </div>
-                )}
-              </div>
-              {/* INFO */}
-              <SidebarSection
-                title="Info"
-                isOpen={sections.info}
-                onToggle={() => toggleSection("info")}
-                onEdit={() => setEditingSection("info")}
-              >
-                <EditableField
-                  label="Brand Name"
-                  value={formData.brandName}
-                  isEditing={isEditing("info")}
-                  forceLabel
-                  onChange={(val) => handleChange("brandName", val)}
-                  placeholder="Your official business name"
-                />
-
-                <EditableField
-                  label="Alias / AKA"
-                  value={formData.aka}
-                  isEditing={isEditing("info")}
-                  onChange={(val) => handleChange("aka", val)}
-                  forceLabel
-                  placeholder="Sweet Manager"
-                />
-
-                {/* 👇 INTEGRACIÓN DEL SELECT MODERNO */}
-                {isEditing("info") ? (
-                  <EditableSelect
-                    label="Industry"
-                    value={formData.industry}
-                    options={INDUSTRIES}
-                    isEditing={true}
-                    onChange={(val) => handleChange("industry", val)}
-                    placeholder="Select Industry"
-                  />
-                ) : (
-                  <EditableField
-                    label="Industry"
-                    value={formData.industry}
-                    isEditing={false} // Modo lectura
-                    forceLabel
-                  />
-                )}
-
-                <EditableField
-                  label="Target Audience"
-                  value={formData.targetAudience}
-                  isEditing={isEditing("info")}
-                  onChange={(val) => handleChange("targetAudience", val)}
-                  forceLabel
-                  placeholder="Women aged 25-40"
-                />
-
-                <EditableField
-                  label="website"
-                  value={formData.website}
-                  isEditing={isEditing("info")}
-                  onChange={(val) => handleChange("website", val)}
-                  forceLabel
-                  placeholder="https://getsweet.ai"
-                />
-              </SidebarSection>
-
-              {/* MISSION & VISION */}
-              <SidebarSection
-                title="Mission & Vision"
-                isOpen={sections.mission}
-                onToggle={() => toggleSection("mission")}
-                onEdit={() => setEditingSection("mission")}
-              >
-                <EditableTextArea
-                  label="Mission"
-                  value={formData.mission}
-                  isEditing={isEditing("mission")}
-                  onChange={(val) => handleChange("mission", val)}
-                />
-                <div className="pt-3 border-t border-gray-200">
-                  <EditableTextArea
-                    label="Vision"
-                    value={formData.vision}
-                    isEditing={isEditing("mission")}
-                    onChange={(val) => handleChange("vision", val)}
-                  />
+        {/* BRAND TAB */}
+        {(!showCampaignUI || tab === "brand") && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500">Brand</div>
+                <div className="text-base font-semibold text-gray-900 truncate">
+                  {brandName}
                 </div>
-              </SidebarSection>
+                {companyData?.industry ? (
+                  <div className="mt-1 text-xs text-gray-500 truncate">
+                    Industry: {companyData.industry}
+                  </div>
+                ) : null}
+              </div>
 
-              {/* SERVICES */}
-              <SidebarSection
-                title="Services"
-                isOpen={sections.services}
-                onToggle={() => toggleSection("services")}
-                onEdit={() => setEditingSection("services")}
+              <button
+                onClick={goBrandFullPage}
+                className="shrink-0 h-9 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 inline-flex items-center gap-2"
               >
-                <EditableList
-                  items={formData.services}
-                  isEditing={isEditing("services")}
-                  onChange={(val) => handleChange("services", val)}
-                />
-              </SidebarSection>
+                <ExternalLink className="w-4 h-4" />
+                Edit
+              </button>
+            </div>
 
-              {/* DIFFERENTIATORS */}
-              <SidebarSection
-                title="Differentiators"
-                isOpen={sections.diff}
-                onToggle={() => toggleSection("diff")}
-                onEdit={() => setEditingSection("diff")}
-              >
-                <EditableList
-                  items={formData.differentiators}
-                  isEditing={isEditing("diff")}
-                  onChange={(val) => handleChange("differentiators", val)}
+            {companyLoading ? (
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading brand…
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <InfoRow
+                  label="Target audience"
+                  value={companyData?.targetAudience || "Not set"}
                 />
-              </SidebarSection>
+                <InfoRow
+                  label="Mission"
+                  value={companyData?.mission || "Not set"}
+                />
+                <InfoRow
+                  label="Vision"
+                  value={companyData?.vision || "Not set"}
+                />
+                <InfoRow
+                  label="Primary goal"
+                  value={companyData?.primaryGoal || "Not set"}
+                />
+                <InfoRow
+                  label="Website"
+                  value={companyData?.website || "Not set"}
+                />
+              </div>
+            )}
 
-              {/* BRAND VOICE */}
-              <SidebarSection
-                title="Brand Voice"
-                isOpen={sections.voice}
-                onToggle={() => toggleSection("voice")}
-                onEdit={() => setEditingSection("voice")}
-              >
-                <EditableList
-                  items={formData.values}
-                  isEditing={isEditing("voice")}
-                  onChange={(val) => handleChange("values", val)}
-                />
-              </SidebarSection>
-
-              {/* COLORS */}
-              <SidebarSection
-                title="Colors"
-                isOpen={sections.colors}
-                onToggle={() => toggleSection("colors")}
-                onEdit={() => setEditingSection("colors")}
-              >
-                <EditableColorPalette
-                  colors={formData.colors}
-                  isEditing={isEditing("colors")}
-                  onChange={(val) => handleChange("colors", val)}
-                />
-              </SidebarSection>
-            </>
-          )}
-        </div>
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-xs text-gray-500 leading-snug">
+                Brand details are shared across campaigns. Edit them in the
+                full-page brand details screen.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Overlay mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 lg:hidden z-40 backdrop-blur-sm"
-          onClick={() => setIsOpen(false)}
-        />
+      {/* Mobile overlay handled by parent layout; sidebar stays as-is */}
+    </div>
+  );
+}
+
+function InfoRow({ icon: Icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3">
+      {Icon ? (
+        <div className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-gray-700" />
+        </div>
+      ) : (
+        <div className="w-9 h-9 shrink-0" />
       )}
-      <CreateCampaignModal
-        isOpen={isCampaignModalOpen}
-        onClose={() => setIsCampaignModalOpen(false)}
-      />
-    </>
+
+      <div className="min-w-0">
+        <div className="text-[11px] font-bold text-gray-500 uppercase">
+          {label}
+        </div>
+        <div className="text-sm text-gray-800 break-words">{value}</div>
+      </div>
+    </div>
   );
 }
