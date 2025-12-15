@@ -1,4 +1,3 @@
-// app/chat/campaign/[id]/page.jsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -7,38 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import LeftSidebar from "@/components/chat/LeftSideBar";
 import RightSidebar from "@/components/chat/RightSideBar";
 import ChatHeader from "@/components/chat/ui/HeaderChat";
-
-function CampaignWorkspacePlaceholder({ campaignId }) {
-  return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="max-w-2xl">
-          <div className="text-sm text-gray-500">Campaign:</div>
-          <div className="text-lg font-semibold text-gray-900">{campaignId}</div>
-
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-2xl p-4">
-            <div className="font-semibold text-gray-800">Campaign workspace</div>
-            <p className="text-sm text-gray-600 mt-1">
-              Put chat history, generated assets, and tasks here.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t bg-white p-4">
-        <div className="max-w-2xl flex gap-2">
-          <input
-            className="flex-1 h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 focus:ring-gray-200"
-            placeholder="Ask Sweet Manager about this campaign…"
-          />
-          <button className="h-11 px-4 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
-            Send
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+import CampaignAdsDraftPanel from "@/components/chat/campaign/CampaignAdsDraftPanel";
 
 export default function CampaignPage() {
   const { id } = useParams();
@@ -48,7 +16,6 @@ export default function CampaignPage() {
   const [isRightOpen, setIsRightOpen] = useState(true);
 
   const activeContext = String(id);
-
   const headerTitle = useMemo(() => "Campaign", []);
 
   return (
@@ -72,7 +39,7 @@ export default function CampaignPage() {
         />
 
         <div className="flex-1 min-h-0">
-          <CampaignWorkspacePlaceholder campaignId={activeContext} />
+          <CampaignAdsDraftPanel campaignId={activeContext} />
         </div>
       </div>
 
