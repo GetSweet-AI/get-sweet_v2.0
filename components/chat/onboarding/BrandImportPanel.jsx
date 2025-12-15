@@ -15,30 +15,37 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+function uid() {
+  return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
 export default function BrandImportPanel({
   brandStatus = "none", // "none" | "importing" | "draft_ready" | "locked" | "failed"
   onStartImport,
-  onJobCreated,
   onDraftReady,
-  onConfirmBrand,
   onImportFailed,
   onGoToAIBrandSetup,
 
   // when user returns from AI page
   aiCompletedSignal = 0,
   onAICompletedHandled,
+
+  // NEW: called when user hits Confirm brand
+  onConfirmBrand,
 }) {
   // ----------------------------
   // Local source meta (no history)
   // ----------------------------
   const [sources, setSources] = useState({
     website: { status: "none", url: "", lastUpdatedAt: null, error: null },
-    deck: { status: "none", fileName: "", cloudinaryUrl: "", lastUpdatedAt: null, error: null },
+    decks: [], // ✅ MULTI: [{ id, status, fileName, cloudinaryUrl, lastUpdatedAt, error }]
     ai: { status: "none", lastUpdatedAt: null }, // "none" | "ready"
   });
 
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [error, setError] = useState("");
+
+  // hidden multi-file input
   const fileRef = useRef(null);
 
   const [confirm, setConfirm] = useState({
@@ -50,7 +57,8 @@ export default function BrandImportPanel({
   });
 
   const isBusy =
-    sources.website.status === "importing" || sources.deck.status === "importing";
+    sources.website.status === "importing" ||
+    sources.decks.some((d) => d.status === "importing");
 
   // Mark AI source as added when user comes back from /chat/brand-ai
   useEffect(() => {
@@ -61,19 +69,20 @@ export default function BrandImportPanel({
       ai: { status: "ready", lastUpdatedAt: new Date().toISOString() },
     }));
 
-    onDraftReady?.();
+    // ✅ create/update a draft for review later (front-end only)
+    onDraftReady?.(buildDraftFromSources({ ...sources, ai: { status: "ready" } }));
 
-    // remove query param so refresh doesn't re-trigger
     onAICompletedHandled?.();
-  }, [aiCompletedSignal, onDraftReady, onAICompletedHandled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiCompletedSignal]);
 
   const helperText = useMemo(() => {
     if (brandStatus === "locked")
       return "Brand is confirmed. You can create goals and campaigns.";
     if (brandStatus === "draft_ready")
-      return "Draft updated. Review the right panel and confirm to continue.";
+      return "Draft updated. Click Confirm to review in full-page Brand Details.";
     if (isBusy) return "Importing… extracting brand info from your sources.";
-    return "Add a website and/or deck. You can also answer AI questions to fill gaps.";
+    return "Add a website and/or multiple PDFs. You can also answer AI questions to fill gaps.";
   }, [brandStatus, isBusy]);
 
   function formatTime(d) {
@@ -142,14 +151,6 @@ export default function BrandImportPanel({
     setWebsiteUrl("");
   }
 
-  function clearDeckSource() {
-    setSources((prev) => ({
-      ...prev,
-      deck: { status: "none", fileName: "", cloudinaryUrl: "", lastUpdatedAt: null, error: null },
-    }));
-    if (fileRef.current) fileRef.current.value = "";
-  }
-
   function clearAISource() {
     setSources((prev) => ({
       ...prev,
@@ -157,13 +158,23 @@ export default function BrandImportPanel({
     }));
   }
 
+  function clearAllDecks() {
+    setSources((prev) => ({ ...prev, decks: [] }));
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function removeDeck(deckId) {
+    setSources((prev) => ({
+      ...prev,
+      decks: prev.decks.filter((d) => d.id !== deckId),
+    }));
+  }
+
   function resetAllSources() {
     clearWebsiteSource();
-    clearDeckSource();
+    clearAllDecks();
     clearAISource();
     setError("");
-    // Optional: you might also want to inform the parent to revert flow:
-    // onReset?.()
   }
 
   // ----------------------------
@@ -182,22 +193,26 @@ export default function BrandImportPanel({
     onStartImport?.("website");
 
     try {
-      // TODO: wire netlify function
-      // const res = await fetch("/.netlify/functions/brand-import-start", { ... })
-      // if (!res.ok) throw new Error()
-      await new Promise((r) => setTimeout(r, 900));
+      // placeholder delay
+      await new Promise((r) => setTimeout(r, 700));
 
-      setSources((prev) => ({
-        ...prev,
+      const next = {
+        ...sources,
         website: {
-          ...prev.website,
           status: "ready",
+          url,
           lastUpdatedAt: new Date().toISOString(),
           error: null,
         },
+      };
+
+      setSources((prev) => ({
+        ...prev,
+        website: next.website,
       }));
 
-      onDraftReady?.();
+      const draft = buildDraftFromSources(next);
+      onDraftReady?.(draft);
     } catch (e) {
       const msg = "Failed to import from website. Please try again.";
       setSources((prev) => ({
@@ -216,64 +231,95 @@ export default function BrandImportPanel({
   }
 
   // ----------------------------
-  // Deck upload / replace
+  // Multi-deck upload
   // ----------------------------
-  async function handleUploadPdf(e) {
+  async function handleUploadPdfs(e) {
     setError("");
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-    const isPdf =
-      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) return setError("Please upload a PDF file.");
+    const pdfs = files.filter(
+      (f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+    );
+
+    if (!pdfs.length) {
+      setError("Please upload PDF files.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    // add as importing
+    const newItems = pdfs.map((f) => ({
+      id: uid(),
+      status: "importing",
+      fileName: f.name,
+      cloudinaryUrl: "",
+      lastUpdatedAt: null,
+      error: null,
+    }));
 
     setSources((prev) => ({
       ...prev,
-      deck: { ...prev.deck, status: "importing", fileName: file.name, error: null },
+      decks: [...prev.decks, ...newItems],
     }));
 
     onStartImport?.("deck");
 
     try {
-      // TODO:
-      // 1) upload to cloudinary => cloudinaryUrl
-      // 2) call netlify function with { cloudinaryUrl, fileName }
-      // 3) backend extracts and merges
+      // placeholder: simulate per-file processing
+      await Promise.all(
+        newItems.map(async (item) => {
+          await new Promise((r) => setTimeout(r, 600));
+          setSources((prev) => ({
+            ...prev,
+            decks: prev.decks.map((d) =>
+              d.id === item.id
+                ? {
+                    ...d,
+                    status: "ready",
+                    cloudinaryUrl: d.cloudinaryUrl || "cloudinary://placeholder",
+                    lastUpdatedAt: new Date().toISOString(),
+                    error: null,
+                  }
+                : d
+            ),
+          }));
+        })
+      );
 
-      await new Promise((r) => setTimeout(r, 1200));
+      const next = {
+        ...sources,
+        decks: [...sources.decks, ...newItems].map((d) =>
+          newItems.some((n) => n.id === d.id)
+            ? { ...d, status: "ready", lastUpdatedAt: new Date().toISOString() }
+            : d
+        ),
+      };
 
-      setSources((prev) => ({
-        ...prev,
-        deck: {
-          ...prev.deck,
-          status: "ready",
-          cloudinaryUrl: prev.deck.cloudinaryUrl || "cloudinary://placeholder",
-          lastUpdatedAt: new Date().toISOString(),
-          error: null,
-        },
-      }));
-
-      onDraftReady?.();
-    } catch (e) {
-      const msg = "Failed to upload or process the PDF. Please try again.";
-      setSources((prev) => ({
-        ...prev,
-        deck: { ...prev.deck, status: "failed", error: msg },
-      }));
+      const draft = buildDraftFromSources(next);
+      onDraftReady?.(draft);
+    } catch (e2) {
+      const msg = "Failed to upload or process one of the PDFs. Please try again.";
       setError(msg);
+      setSources((prev) => ({
+        ...prev,
+        decks: prev.decks.map((d) =>
+          d.status === "importing" ? { ...d, status: "failed", error: msg } : d
+        ),
+      }));
       onImportFailed?.();
     } finally {
       if (fileRef.current) fileRef.current.value = "";
     }
   }
 
-  function handleReplaceDeckClick() {
+  function triggerDeckPicker() {
     fileRef.current?.click();
   }
 
   const anySourceReady =
     sources.website.status === "ready" ||
-    sources.deck.status === "ready" ||
+    sources.decks.some((d) => d.status === "ready") ||
     sources.ai.status === "ready";
 
   return (
@@ -291,7 +337,7 @@ export default function BrandImportPanel({
             onClick={() =>
               openConfirm({
                 title: "Reset all sources?",
-                body: "This will remove the website, deck, and AI answers from this setup screen. (No history is stored.)",
+                body: "This will remove the website, uploaded PDFs, and AI answers from this setup screen.",
                 confirmText: "Reset",
                 action: resetAllSources,
               })
@@ -337,7 +383,7 @@ export default function BrandImportPanel({
                     onClick={() =>
                       openConfirm({
                         title: "Remove website source?",
-                        body: "This will remove the website URL and extracted info from the current setup screen.",
+                        body: "This will remove the website URL from this setup screen.",
                         confirmText: "Remove",
                         action: clearWebsiteSource,
                       })
@@ -394,7 +440,7 @@ export default function BrandImportPanel({
             </div>
           </div>
 
-          {/* DECK */}
+          {/* MULTI-PDF DECKS */}
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
@@ -404,92 +450,104 @@ export default function BrandImportPanel({
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-gray-900">
-                      Brand / pitch deck (PDF)
+                      Brand docs (PDF)
                     </p>
-                    <SourceStatusPill status={sources.deck.status} />
+                    <span className="text-xs text-gray-500">
+                      {sources.decks.length ? `${sources.decks.length} added` : "Add multiple"}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-600">
-                    Best for mission, positioning, voice, differentiators
+                    Upload multiple files — pitch deck, one-pager, brand guide, etc.
                   </p>
                 </div>
               </div>
 
-              {sources.deck.status === "ready" ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleReplaceDeckClick}
-                    disabled={isBusy || brandStatus === "locked"}
-                    className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-800 hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Update
-                  </button>
-
+              <div className="flex items-center gap-2">
+                {sources.decks.length ? (
                   <button
                     onClick={() =>
                       openConfirm({
-                        title: "Remove deck source?",
-                        body: "This will remove the current PDF from this setup screen. You can upload a new deck anytime.",
-                        confirmText: "Remove",
-                        action: clearDeckSource,
+                        title: "Remove all PDFs?",
+                        body: "This clears the PDF list from this setup screen.",
+                        confirmText: "Remove all",
+                        action: clearAllDecks,
                       })
                     }
                     disabled={isBusy || brandStatus === "locked"}
                     className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                   >
                     <Trash2 className="w-4 h-4" />
-                    Remove
+                    Remove all
                   </button>
-                </div>
-              ) : null}
-            </div>
-
-            {sources.deck.fileName ? (
-              <div className="mb-3 text-xs text-gray-700">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="truncate">
-                    <span className="text-gray-500">File:</span>{" "}
-                    <span className="font-semibold">{sources.deck.fileName}</span>
-                  </div>
-                  {sources.deck.lastUpdatedAt ? (
-                    <div className="shrink-0 text-gray-500">
-                      Updated {formatTime(sources.deck.lastUpdatedAt)}
-                    </div>
-                  ) : null}
-                </div>
-                {sources.deck.error ? (
-                  <div className="mt-2 text-red-600">{sources.deck.error}</div>
                 ) : null}
               </div>
-            ) : null}
+            </div>
+
+            {/* Hidden multi input */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              onChange={handleUploadPdfs}
+              className="hidden"
+              disabled={isBusy || brandStatus === "locked"}
+            />
 
             <div className="flex items-center gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="application/pdf,.pdf"
-                onChange={handleUploadPdf}
-                className="hidden"
-                disabled={isBusy || brandStatus === "locked"}
-              />
-
               <button
-                onClick={() => fileRef.current?.click()}
+                onClick={triggerDeckPicker}
                 disabled={isBusy || brandStatus === "locked"}
                 className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-800 hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
               >
-                {sources.deck.status === "importing" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                {sources.deck.status === "ready" ? "Upload new PDF" : "Upload PDF"}
+                <Upload className="w-4 h-4" />
+                Upload PDFs
               </button>
-
               <p className="text-xs text-gray-600">
-                We’ll extract key brand info automatically.
+                We’ll extract key brand info automatically (backend later).
               </p>
             </div>
+
+            {/* Deck list */}
+            {sources.decks.length ? (
+              <div className="mt-3 space-y-2">
+                {sources.decks.map((d) => (
+                  <div
+                    key={d.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {d.fileName}
+                        </p>
+                        <SourceStatusPill status={d.status} />
+                      </div>
+                      <div className="text-[11px] text-gray-500">
+                        {d.lastUpdatedAt ? `Updated ${formatTime(d.lastUpdatedAt)}` : ""}
+                        {d.error ? <span className="text-red-600"> • {d.error}</span> : null}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        openConfirm({
+                          title: "Remove this PDF?",
+                          body: "This removes the PDF from this setup screen.",
+                          confirmText: "Remove",
+                          action: () => removeDeck(d.id),
+                        })
+                      }
+                      disabled={isBusy || brandStatus === "locked"}
+                      className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2 shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {/* AI */}
@@ -505,7 +563,7 @@ export default function BrandImportPanel({
                     <SourceStatusPill status={sources.ai.status} />
                   </div>
                   <p className="text-xs text-gray-600">
-                    Optional — fill gaps after website/deck import.
+                    Optional — fill gaps after website/docs import.
                   </p>
                 </div>
               </div>
@@ -524,7 +582,7 @@ export default function BrandImportPanel({
                     onClick={() =>
                       openConfirm({
                         title: "Remove AI answers?",
-                        body: "This will clear the AI question results from this setup screen.",
+                        body: "This clears the AI question results from this setup screen.",
                         confirmText: "Remove",
                         action: clearAISource,
                       })
@@ -558,11 +616,15 @@ export default function BrandImportPanel({
               <div>
                 <p className="text-sm font-semibold text-green-900">Brand draft ready</p>
                 <p className="text-xs text-green-800">
-                  Review it in the right panel, then confirm to continue.
+                  Confirm to review in full-page Brand Details.
                 </p>
               </div>
               <button
-                onClick={() => onConfirmBrand?.()}
+                onClick={() => {
+                  // ✅ build draft and hand off
+                  const draft = buildDraftFromSources(sources);
+                  onConfirmBrand?.(draft);
+                }}
                 className="h-10 px-4 rounded-xl bg-green-700 text-white text-sm font-semibold hover:bg-green-800"
               >
                 Confirm brand
@@ -614,4 +676,39 @@ export default function BrandImportPanel({
       )}
     </div>
   );
+}
+
+/**
+ * Front-end only: create a draft object.
+ * Later your backend will build/merge this for real.
+ */
+function buildDraftFromSources(sources) {
+  // You can make this smarter later.
+  // For now: return a stable skeleton so Brand Details page has fields.
+  return {
+    brandName: "",
+    aka: "",
+    industry: "",
+    targetAudience: "",
+    website: sources.website?.url || "",
+    mission: "",
+    vision: "",
+    services: [],
+    differentiators: [],
+    values: [],
+    colors: [],
+
+    // Goals block
+    primaryGoal: "",
+    goals: [],
+    successMetric: "",
+    goalTimeframe: "",
+
+    // metadata for display/debug
+    __sources: {
+      website: sources.website,
+      decks: sources.decks,
+      ai: sources.ai,
+    },
+  };
 }

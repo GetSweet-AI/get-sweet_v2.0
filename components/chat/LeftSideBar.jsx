@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MessageSquare,
   Rocket,
@@ -13,23 +13,41 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/useContext";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import CreateCampaignModal from "./modals/CreateCampaignModal";
 
-export default function LeftSidebar({
-  isOpen,
-  setIsOpen,
-  activeContext,
-  setActiveContext,
-}) {
+export default function LeftSidebar({ isOpen, setIsOpen }) {
   const { user, logout, token } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [campaignList, setCampaignList] = useState([]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
 
-  const getInitials = (name) => (name ? name.substring(0, 2).toUpperCase() : "U");
+  const getInitials = (name) =>
+    name ? name.substring(0, 2).toUpperCase() : "U";
 
+  // ----------------------------------------------------
+  // URL-derived active state
+  // ----------------------------------------------------
+  const activeCampaignId = useMemo(() => {
+    // supports: /chat/campaign/:id (and anything nested under it)
+    if (!pathname) return null;
+    if (!pathname.startsWith("/chat/campaign/")) return null;
+    const rest = pathname.replace("/chat/campaign/", "");
+    const id = rest.split("/")[0];
+    return id || null;
+  }, [pathname]);
+
+  const isOnBrandSetup = useMemo(() => {
+    // Brand setup is the /chat root (or anything you consider "general")
+    // Adjust if you later add /chat/brand-confirm, etc.
+    return pathname === "/chat" || pathname === "/chat/";
+  }, [pathname]);
+
+  // ----------------------------------------------------
+  // Fetch campaigns
+  // ----------------------------------------------------
   const getCampaignsList = async () => {
     if (!token) return;
     try {
@@ -70,13 +88,19 @@ export default function LeftSidebar({
     setIsCampaignModalOpen(false);
   };
 
-  const navigate = (contextId) => {
-    if (typeof setActiveContext === "function") {
-      setActiveContext(contextId);
-    } else {
-      router.push("/chat");
-    }
-    setIsOpen?.(false);
+  // ----------------------------------------------------
+  // Navigation helpers
+  // ----------------------------------------------------
+  const closeSidebar = () => setIsOpen?.(false);
+
+  const goBrandSetup = () => {
+    router.push("/chat");
+    closeSidebar();
+  };
+
+  const goCampaign = (id) => {
+    router.push(`/chat/campaign/${id}`);
+    closeSidebar();
   };
 
   return (
@@ -92,18 +116,17 @@ export default function LeftSidebar({
       >
         {/* Header */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0">
-          <button
-            onClick={() => router.push("/chat")}
-            className="flex items-center gap-2"
-          >
+          <button onClick={goBrandSetup} className="flex items-center gap-2">
             <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg tracking-tight">Sweet Manager</span>
+            <span className="font-bold text-lg tracking-tight">
+              Sweet Manager
+            </span>
           </button>
 
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={closeSidebar}
             className="lg:hidden text-slate-400 hover:text-white"
             aria-label="Close sidebar"
           >
@@ -120,9 +143,9 @@ export default function LeftSidebar({
 
           <nav className="space-y-1 px-2">
             <button
-              onClick={() => navigate("general")}
+              onClick={goBrandSetup}
               className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeContext === "general"
+                isOnBrandSetup
                   ? "bg-purple-600 text-white"
                   : "text-slate-400 hover:bg-slate-800 hover:text-white"
               }`}
@@ -147,17 +170,19 @@ export default function LeftSidebar({
 
           <nav className="space-y-1 px-2">
             {campaignList.length === 0 ? (
-              <p className="px-3 text-xs text-slate-600 italic">No campaigns yet.</p>
+              <p className="px-3 text-xs text-slate-600 italic">
+                No campaigns yet.
+              </p>
             ) : (
               campaignList.map((c) => {
                 const id = c?._id || c?.id;
                 const name = c?.name || "Untitled campaign";
-                const isActive = activeContext === id;
+                const isActive = Boolean(id) && activeCampaignId === String(id);
 
                 return (
                   <button
                     key={id}
-                    onClick={() => navigate(id)}
+                    onClick={() => goCampaign(id)}
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       isActive
                         ? "bg-purple-600 text-white"
@@ -187,7 +212,10 @@ export default function LeftSidebar({
           {/* Settings */}
           <div className="p-2">
             <button
-              onClick={() => router.push("/settings")}
+              onClick={() => {
+                router.push("/settings");
+                closeSidebar();
+              }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
             >
               <Settings className="w-4 h-4" />
@@ -234,7 +262,10 @@ export default function LeftSidebar({
                 </button>
               ) : (
                 <button
-                  onClick={() => router.push("/sign-in")}
+                  onClick={() => {
+                    router.push("/sign-in");
+                    closeSidebar();
+                  }}
                   className="p-2 text-slate-400 hover:text-green-400 hover:bg-slate-800 rounded-lg transition-colors"
                   title="Sign in"
                   aria-label="Sign in"
@@ -251,7 +282,7 @@ export default function LeftSidebar({
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
