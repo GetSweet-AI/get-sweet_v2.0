@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import {
   Search,
   SlidersHorizontal,
@@ -17,17 +16,19 @@ import {
   Clock,
   BadgeCheck,
   PauseCircle,
-  Users,
-  Workflow,
   Boxes,
+  Workflow,
+  Users,
 } from "lucide-react";
-
-import Image from "next/image";
 import { SiFacebook } from "react-icons/si";
 
 import LeftSidebar from "@/components/chat/LeftSideBar";
 import ChatHeader from "@/components/chat/ui/HeaderChat";
 import { useAuth } from "@/context/useContext"; // adjust if needed
+
+/* -----------------------------
+   Small UI helpers
+------------------------------ */
 
 function Pill({ active, children, onClick }) {
   return (
@@ -140,6 +141,7 @@ function CircleIcon({
   size = "lg",
   bgClass = "bg-white",
   ringClass = "border-gray-200",
+  fit = "contain", // "contain" | "cover"
 }) {
   const map = {
     sm: "w-10 h-10",
@@ -149,13 +151,29 @@ function CircleIcon({
 
   return (
     <div
-      className={`${map[size]} rounded-full ${bgClass} border ${ringClass} shadow-sm flex items-center justify-center overflow-hidden`}
+      className={`
+        ${map[size]}
+        rounded-full
+        ${bgClass}
+        border
+        ${ringClass}
+        shadow-sm
+        flex
+        items-center
+        justify-center
+        overflow-hidden
+        shrink-0
+      `}
     >
       {imageSrc ? (
         <img
           src={imageSrc}
           alt={imageAlt}
-          className="w-[60%] h-[60%] object-contain"
+          className={`
+            w-full
+            h-full
+            ${fit === "cover" ? "object-cover" : "object-contain"}
+          `}
           draggable={false}
         />
       ) : Icon ? (
@@ -165,93 +183,125 @@ function CircleIcon({
   );
 }
 
-function AgentTile({ title, blurb, icon, iconBg, iconBorder, iconColor, onClick }) {
+function FeaturedTag() {
+  return (
+    <span className="inline-flex items-center h-7 px-3 rounded-full bg-purple-50 border border-purple-200 text-[11px] font-extrabold text-purple-700">
+      Featured
+    </span>
+  );
+}
+
+function AgentTile({
+  title,
+  blurb,
+  icon,
+  iconBg,
+  iconBorder,
+  iconColor,
+  onClick,
+  featured,
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="text-left w-full rounded-3xl border border-gray-200 bg-white hover:bg-gray-50 transition p-5"
+      className={`text-left w-full rounded-3xl border bg-white hover:bg-gray-50 transition p-5 ${
+        featured ? "border-purple-200" : "border-gray-200"
+      }`}
     >
-      <div className="flex items-center gap-4">
-        <CircleIcon
-          Icon={icon}
-          size="lg"
-          bgClass={iconBg}
-          borderClass={iconBorder}
-          iconClass={iconColor}
-        />
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-900 truncate">
-            {title}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-4 min-w-0">
+          <CircleIcon
+            Icon={icon}
+            size="lg"
+            bgClass={iconBg}
+            borderClass={iconBorder}
+            iconClass={iconColor}
+          />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 truncate">
+              {title}
+            </div>
+            <div className="mt-1 text-xs text-gray-600 line-clamp-2">
+              {blurb}
+            </div>
           </div>
-          <div className="mt-1 text-xs text-gray-600 line-clamp-2">{blurb}</div>
         </div>
+
+        {featured ? (
+          <div className="shrink-0">
+            <FeaturedTag />
+          </div>
+        ) : null}
       </div>
     </button>
   );
 }
 
-function AgentTileImage({ title, blurb, imageSrc, onClick }) {
+function AgentTileImage({ title, blurb, imageSrc, onClick, featured }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="text-left w-full rounded-3xl border border-gray-200 bg-white hover:bg-gray-50 transition p-5"
+      className={`text-left w-full rounded-3xl border bg-white hover:bg-gray-50 transition p-5 ${
+        featured ? "border-purple-200" : "border-gray-200"
+      }`}
     >
-      <div className="flex items-center gap-4">
-        <CircleIcon
-          size="lg"
-          imageSrc={imageSrc}
-          imageAlt={title}
-          bgClass="bg-white"
-          borderClass="border-gray-200"
-        />
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-900 truncate">
-            {title}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-4 min-w-0">
+          <CircleIcon
+            size="lg"
+            imageSrc={imageSrc}
+            imageAlt={title}
+            bgClass="bg-white"
+            borderClass={featured ? "border-purple-200" : "border-gray-200"}
+            innerScaleClass="w-[62%] h-[62%]"
+          />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 truncate">
+              {title}
+            </div>
+            <div className="mt-1 text-xs text-gray-600 line-clamp-2">
+              {blurb}
+            </div>
           </div>
-          <div className="mt-1 text-xs text-gray-600 line-clamp-2">{blurb}</div>
         </div>
+
+        {featured ? (
+          <div className="shrink-0">
+            <FeaturedTag />
+          </div>
+        ) : null}
       </div>
     </button>
   );
 }
 
-/* -----------------------------
-   AGENT GROUPS (overlapping)
------------------------------- */
-
-function OverlapIcons({ items = [] }) {
-  const shown = items.slice(0, 3);
-  const remaining = items.length - shown.length;
+function GroupIconStack({ icons = [] }) {
+  const shown = icons.slice(0, 3);
+  const remaining = Math.max(0, icons.length - shown.length);
 
   return (
     <div className="flex items-center">
       <div className="flex -space-x-3">
         {shown.map((it, idx) => (
-          <div key={idx} className="shrink-0">
-            {it.imageSrc ? (
-              <CircleIcon
-                size="md"
-                imageSrc={it.imageSrc}
-                imageAlt={it.title || "icon"}
-                bgClass={it.iconBg || "bg-white"}
-                borderClass={it.iconBorder || "border-gray-200"}
-              />
-            ) : (
-              <CircleIcon
-                size="md"
-                Icon={it.icon}
-                bgClass={it.iconBg || "bg-white"}
-                borderClass={it.iconBorder || "border-gray-200"}
-                iconClass={it.iconColor || "text-gray-900"}
-              />
-            )}
+          <div key={idx} className="relative">
+            <CircleIcon
+              size="md"
+              Icon={it.Icon}
+              imageSrc={it.imageSrc}
+              imageAlt={it.alt || ""}
+              bgClass={it.bgClass || "bg-white"}
+              borderClass={it.borderClass || "border-gray-200"}
+              iconClass={it.iconClass || "text-gray-900"}
+              innerScaleClass="w-[58%] h-[58%]"
+            />
           </div>
         ))}
+
         {remaining > 0 ? (
-          <div className="shrink-0">
-            <div className="w-12 h-12 rounded-full bg-gray-900 border border-gray-900 shadow-sm flex items-center justify-center text-white text-xs font-bold">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full bg-gray-900 border border-gray-900 shadow-sm flex items-center justify-center text-white text-xs font-extrabold">
               +{remaining}
             </div>
           </div>
@@ -268,13 +318,16 @@ function AgentGroupTile({ title, blurb, icons, onClick }) {
       onClick={onClick}
       className="text-left w-full rounded-3xl border border-gray-200 bg-white hover:bg-gray-50 transition p-5"
     >
-      <div className="flex items-center gap-4">
-        <OverlapIcons items={icons} />
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-gray-900 truncate">
             {title}
           </div>
           <div className="mt-1 text-xs text-gray-600 line-clamp-2">{blurb}</div>
+        </div>
+
+        <div className="shrink-0">
+          <GroupIconStack icons={icons} />
         </div>
       </div>
     </button>
@@ -282,7 +335,7 @@ function AgentGroupTile({ title, blurb, icons, onClick }) {
 }
 
 /* -----------------------------
-   DATA
+   Data
 ------------------------------ */
 
 const TEMPLATE_CATALOG = [
@@ -327,6 +380,32 @@ const QUICK_ACTIONS = [
 ];
 
 const AGENTS = [
+  // ✅ FEATURED FIRST
+  {
+    id: "agent_nomorecopyright",
+    title: "No More Copyright",
+    blurb: "Generate image assets instantly for ads + landing pages.",
+    imageSrc: "/icons/nomorecopyright.webp",
+    featured: true,
+  },
+
+  // ✅ NEW: Ad agency (image logo)
+  {
+    id: "agent_fcb",
+    title: "FCB (Ad Agency)",
+    blurb: "Big-brand creative direction + campaign concepts.",
+    imageSrc: "/icons/fcb.png",
+  },
+
+  // ✅ NEW: Solo SEO agency (your image)
+  {
+    id: "agent_nathan_seo",
+    title: "Nathan SEO",
+    blurb: "Technical SEO, content plan, and ranking checklist.",
+    imageSrc: "/icons/nathan-seo.png",
+  },
+
+  // existing
   {
     id: "agent_google_ads",
     title: "Google Ads",
@@ -339,103 +418,58 @@ const AGENTS = [
   {
     id: "agent_meta_ads",
     title: "Meta Ads",
-    blurb: "Angles, hooks, creatives + targeting.",
+    blurb: "Creative angles, audiences, hooks + variants.",
     icon: SiFacebook,
-    iconBg: "bg-sky-50",
-    iconBorder: "border-sky-200",
-    iconColor: "text-sky-700",
+    iconBg: "bg-indigo-50",
+    iconBorder: "border-indigo-200",
+    iconColor: "text-indigo-700",
   },
   {
     id: "agent_email",
-    title: "Email",
-    blurb: "Flows, subject lines, copy + segments.",
+    title: "Email Marketing",
+    blurb: "Flows, sequences, subject lines + copy.",
     icon: Mail,
     iconBg: "bg-amber-50",
     iconBorder: "border-amber-200",
-    iconColor: "text-amber-700",
+    iconColor: "text-amber-800",
   },
   {
     id: "agent_landing",
     title: "Landing Page",
-    blurb: "Offer page outline + hero copy.",
+    blurb: "Offer, sections, headlines, trust + CTA.",
     icon: Globe,
     iconBg: "bg-emerald-50",
     iconBorder: "border-emerald-200",
     iconColor: "text-emerald-700",
   },
-  {
-    id: "agent_assets_nmc",
-    title: "NoMoreCopyright",
-    blurb: "Generate image assets for ads fast.",
-    imageSrc:
-      "https://nomorecopyright.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fnomorecopyright_logo_icon.12c77161.png&w=96&q=75",
-  },
 ];
 
 const AGENT_GROUPS = [
   {
-    id: "group_google_leads",
-    title: "Local Leads Launch",
-    blurb: "Google Search campaign + landing + tracking checklist.",
+    id: "group_local_leads",
+    title: "Local Leads (Fast Launch)",
+    blurb: "Google Search + landing outline + weekly reporting.",
     icons: [
-      {
-        icon: Rocket,
-        iconBg: "bg-blue-50",
-        iconBorder: "border-blue-200",
-        iconColor: "text-blue-700",
-        title: "Google Ads",
-      },
-      {
-        icon: Globe,
-        iconBg: "bg-emerald-50",
-        iconBorder: "border-emerald-200",
-        iconColor: "text-emerald-700",
-        title: "Landing",
-      },
-      {
-        icon: Target,
-        iconBg: "bg-purple-50",
-        iconBorder: "border-purple-200",
-        iconColor: "text-purple-700",
-        title: "Conversion",
-      },
-      {
-        imageSrc:
-          "https://nomorecopyright.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fnomorecopyright_logo_icon.12c77161.png&w=96&q=75",
-        title: "NMC",
-      },
+      { Icon: Rocket, bgClass: "bg-blue-50", borderClass: "border-blue-200", iconClass: "text-blue-700" },
+      { Icon: Globe, bgClass: "bg-emerald-50", borderClass: "border-emerald-200", iconClass: "text-emerald-700" },
+      { Icon: Sparkles, bgClass: "bg-purple-50", borderClass: "border-purple-200", iconClass: "text-purple-700" },
+      { Icon: Target, bgClass: "bg-gray-50", borderClass: "border-gray-200", iconClass: "text-gray-900" },
     ],
   },
   {
-    id: "group_meta_creative",
+    id: "group_meta_creative_sprint",
     title: "Meta Creative Sprint",
-    blurb: "3 hooks + 6 creatives + targeting set.",
+    blurb: "Angles → variants → hooks → testing checklist.",
     icons: [
-      {
-        icon: SiFacebook,
-        iconBg: "bg-sky-50",
-        iconBorder: "border-sky-200",
-        iconColor: "text-sky-700",
-        title: "Meta",
-      },
-      {
-        imageSrc:
-          "https://nomorecopyright.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fnomorecopyright_logo_icon.12c77161.png&w=96&q=75",
-        title: "NMC",
-      },
-      {
-        icon: Megaphone,
-        iconBg: "bg-rose-50",
-        iconBorder: "border-rose-200",
-        iconColor: "text-rose-700",
-        title: "Messaging",
-      },
+      { Icon: SiFacebook, bgClass: "bg-indigo-50", borderClass: "border-indigo-200", iconClass: "text-indigo-700" },
+      { Icon: Sparkles, bgClass: "bg-purple-50", borderClass: "border-purple-200", iconClass: "text-purple-700" },
+      { Icon: Megaphone, bgClass: "bg-gray-50", borderClass: "border-gray-200", iconClass: "text-gray-900" },
     ],
   },
 ];
 
 /* -----------------------------
-   PAGE
+   Page
 ------------------------------ */
 
 export default function CampaignsClient() {
@@ -444,13 +478,16 @@ export default function CampaignsClient() {
 
   const [isLeftOpen, setIsLeftOpen] = useState(false);
 
+  // Main segmented view
   const [view, setView] = useState("campaigns"); // campaigns | agents | templates | marketplace
 
+  // Search + filters
   const [query, setQuery] = useState("");
   const [filterChannel, setFilterChannel] = useState("all");
   const [filterObjective, setFilterObjective] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
 
+  // Data
   const [loading, setLoading] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [error, setError] = useState("");
@@ -463,16 +500,13 @@ export default function CampaignsClient() {
       setLoading(true);
 
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            cache: "no-store",
-          }
-        );
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          cache: "no-store",
+        });
 
         if (!res.ok) throw new Error("No campaigns endpoint yet");
 
@@ -528,9 +562,9 @@ export default function CampaignsClient() {
   }, [view]);
 
   const welcomeTitle = useMemo(() => {
-    if (view === "agents") return "Choose an agent to run a task";
     if (view === "templates") return "Pick a template to start fast";
     if (view === "marketplace") return "Explore campaign packs & workflows";
+    if (view === "agents") return "Install an agent (or a reusable group)";
     return "What will you launch today?";
   }, [view]);
 
@@ -581,21 +615,32 @@ export default function CampaignsClient() {
   }
 
   function handleAgentClick(agentId) {
-    // simplest: start a new campaign and pass agent hint
-    // you can later route to a “run agent” modal, or attach to an existing campaign
-    if (agentId === "agent_assets_nmc") return goNewCampaign({ agent: "nmc_assets" });
-    if (agentId === "agent_meta_ads") return goNewCampaign({ agent: "meta_ads" });
-    if (agentId === "agent_google_ads") return goNewCampaign({ agent: "google_ads" });
-    if (agentId === "agent_email") return goNewCampaign({ agent: "email" });
-    if (agentId === "agent_landing") return goNewCampaign({ agent: "landing" });
-
-    return goNewCampaign({ agent: agentId });
+    // Placeholder: start a new campaign with agent hint
+    goNewCampaign({ agent: agentId });
   }
 
   function handleAgentGroupClick(groupId) {
-    // treat as “template/pack”
-    return goNewCampaign({ pack: groupId });
+    // Placeholder: start a new campaign with group hint
+    goNewCampaign({ agentGroup: groupId });
   }
+
+  const agentsFiltered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = [...AGENTS];
+
+    // Ensure featured stays first even after filtering where it matches
+    if (!q) return list;
+
+    const filtered = list.filter((a) => {
+      const t = (a.title || "").toLowerCase();
+      const b = (a.blurb || "").toLowerCase();
+      return t.includes(q) || b.includes(q);
+    });
+
+    // Keep featured first if present
+    filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+    return filtered;
+  }, [query]);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -621,7 +666,7 @@ export default function CampaignsClient() {
                 {welcomeTitle}
               </h1>
 
-              {/* segmented pills (now includes Agents) */}
+              {/* Segmented pills */}
               <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
                 <Pill active={view === "campaigns"} onClick={() => setView("campaigns")}>
                   Your campaigns
@@ -645,7 +690,7 @@ export default function CampaignsClient() {
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="What would you like Sweet Ad Manager to help with today?"
+                      placeholder="Search campaigns, agents, templates…"
                       className="flex-1 outline-none text-sm text-gray-900 placeholder:text-gray-400"
                     />
                     <button
@@ -657,6 +702,7 @@ export default function CampaignsClient() {
                     </button>
                   </div>
 
+                  {/* Filter chips */}
                   <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
                     <Chip onClick={() => setFilterChannel((p) => (p === "all" ? "google" : "all"))}>
                       Channel: {filterChannel === "all" ? "All" : filterChannel}
@@ -681,7 +727,7 @@ export default function CampaignsClient() {
                 </div>
               </div>
 
-              {/* Quick actions */}
+              {/* Quick actions row */}
               <div className="mt-8">
                 <div className="flex items-center justify-center gap-6 flex-wrap">
                   {QUICK_ACTIONS.map((a) => {
@@ -715,7 +761,7 @@ export default function CampaignsClient() {
               </div>
             </div>
 
-            {/* CONTENT */}
+            {/* CONTENT AREA */}
             <div className="mt-10 space-y-10">
               {error ? (
                 <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl p-4">
@@ -789,30 +835,35 @@ export default function CampaignsClient() {
                     <div>
                       <div className="flex items-center gap-2">
                         <Boxes className="w-5 h-5 text-gray-700" />
-                        <h2 className="text-lg font-semibold text-gray-900">Agents available</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          Agents available
+                        </h2>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
                         Run a single task fast — or install a group used in other campaigns.
                       </p>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push("/chat/agents/request")} // placeholder route
+                      className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-900 hover:bg-gray-50 inline-flex items-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      Request / Submit agent
+                    </button>
                   </div>
 
                   {/* agents grid */}
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {AGENTS.filter((a) => {
-                      const q = query.trim().toLowerCase();
-                      if (!q) return true;
-                      return (
-                        a.title.toLowerCase().includes(q) ||
-                        a.blurb.toLowerCase().includes(q)
-                      );
-                    }).map((a) =>
+                    {agentsFiltered.map((a) =>
                       a.imageSrc ? (
                         <AgentTileImage
                           key={a.id}
                           title={a.title}
                           blurb={a.blurb}
                           imageSrc={a.imageSrc}
+                          featured={!!a.featured}
                           onClick={() => handleAgentClick(a.id)}
                         />
                       ) : (
@@ -824,6 +875,7 @@ export default function CampaignsClient() {
                           iconBg={a.iconBg}
                           iconBorder={a.iconBorder}
                           iconColor={a.iconColor}
+                          featured={!!a.featured}
                           onClick={() => handleAgentClick(a.id)}
                         />
                       )
@@ -913,7 +965,7 @@ export default function CampaignsClient() {
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">Marketplace</h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      Packs you can “install”: templates + tasks + prompts (agent groups).
+                      Packs you can “install” into your workspace: campaign templates + tasks + prompts.
                     </p>
                   </div>
 
@@ -929,14 +981,14 @@ export default function CampaignsClient() {
                       {
                         id: "pack_ecom_roas",
                         title: "ROAS Ecommerce Pack",
-                        subtitle: "Search + Shopping • feed checklist • ROAS reporting",
+                        subtitle: "Search + Shopping • product feed checklist • ROAS reporting",
                         tag: "Advanced",
                         icon: Megaphone,
                       },
                       {
                         id: "pack_email_growth",
                         title: "Email Growth Pack",
-                        subtitle: "Welcome + winback + upsell • copy included",
+                        subtitle: "Welcome flow + winback + upsell • copy included",
                         tag: "Quick setup",
                         icon: Mail,
                       },
