@@ -1,24 +1,26 @@
 "use client";
+
 import { Mail, Lock, ArrowLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
 import logo from "../../public/icons/logogetsweet.png";
 import { useState } from "react";
 import { useAuth } from "@/context/useContext";
 import { GoogleLoginBtn } from "@/components/auth/GoogleLogin";
-
-const GOOGLE_ICON_URL = "https://www.svgrepo.com/show/475656/google-color.svg";
+import { useRouter } from "next/navigation"; // <--- 1. IMPORTAR ROUTER
 
 export default function SignIn() {
+  const router = useRouter(); // <--- 2. INICIALIZAR ROUTER
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleBackToHome = () => {
-    window.location.href = "/";
-  };
-
+  // Traemos la función login del context
   const { login } = useAuth();
+
+  const handleBackToHome = () => {
+    router.push("/"); // <--- 3. NAVEGACIÓN SPA (Sin recarga)
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -49,28 +51,30 @@ export default function SignIn() {
         );
       }
 
-      console.log("Token:", data.token);
-      console.log("ID:", data._id);
-      console.log("Nombre:", data.fullName);
-      console.log("Email:", data.email);
+      console.log("🔥 Login Exitoso:", data);
 
-      // Guardar en contexto y localStorage
+      // CORRECCIÓN DE ESTRUCTURA
+      // Buscamos el objeto de usuario donde sea que el backend lo haya puesto
+      const userData = data.user || data.data?.user || data;
+
+      // 4. ACTUALIZAR ESTADO GLOBAL
       login(
         {
-          id: data._id,
-          name: data.fullName,
-          email: data.email,
-          role: data.role,
+          id: userData._id || userData.id,
+          name: userData.fullName || userData.name,
+          email: userData.email,
+          role: userData.role,
+          ...userData, // Guardamos el resto de propiedades por si acaso
         },
         data.token
       );
 
-      window.location.href = "/thank-u";
+      // 5. REDIRECCIÓN SPA (Mantiene el estado)
+      router.push("/chat");
     } catch (err) {
       console.error("Error en el login:", err);
       setError(err.message || "No se pudo conectar al servidor.");
-    } finally {
-      setLoading(false);
+      setLoading(false); // Solo quitamos loading si falla
     }
   };
 
@@ -85,9 +89,9 @@ export default function SignIn() {
       <button
         onClick={handleBackToHome}
         className="absolute top-8 left-4 md:top-12 md:left-26
-                   flex items-center gap-2 text-sm font-medium text-purple-900
-                   hover:text-purple-600 transition duration-150 p-4 
-                   hover-shadow-md"
+                    flex items-center gap-2 text-sm font-medium text-purple-900
+                    hover:text-purple-600 transition duration-150 p-4 
+                    hover-shadow-md"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Home
@@ -111,7 +115,6 @@ export default function SignIn() {
           Sign in to continue to Get Sweet AI
         </p>
 
-        {/* Google Sign-In */}
         <GoogleLoginBtn label="Continue with Google" />
 
         <div className="flex items-center my-6">
@@ -151,18 +154,12 @@ export default function SignIn() {
                 className="text-gray-800 w-full border border-gray-300 rounded-lg py-2.5 pl-10 pr-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition duration-150"
               />
             </div>
-            <div className="text-right mt-2">
-              {/* <a
-                href="#"
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium transition duration-150"
-              >
-                Forgot password?
-              </a> */}
-            </div>
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm text-center mt-2">{error}</p>
+            <p className="text-red-500 text-sm text-center mt-2 bg-red-50 p-2 rounded border border-red-200">
+              {error}
+            </p>
           )}
 
           <button
@@ -186,12 +183,6 @@ export default function SignIn() {
           >
             Sign up for free
           </a>
-        </p>
-      </div>
-
-      <div className="absolute bottom-4 sm:bottom-10">
-        <p className="text-[11px] text-gray-400/70 mt-6 text-center">
-          Protected by enterprise-grade security
         </p>
       </div>
     </section>

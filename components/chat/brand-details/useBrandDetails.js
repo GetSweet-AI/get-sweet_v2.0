@@ -140,7 +140,7 @@ export function useBrandDetails() {
       // 5. Redirigir a Campaign
       setTimeout(() => {
         setToast(null);
-        router.push("/campaign/new");
+        router.push("/chat/campaign");
       }, 1000);
     } catch (err) {
       console.error(err);
