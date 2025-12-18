@@ -23,7 +23,7 @@ export default function WebsiteSection({
   const isImporting = source.status === "importing";
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 transition-all hover:border-gray-300 mt-50">
+    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 transition-all hover:border-gray-300 ">
       {/* HEADER DEL CARD */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
