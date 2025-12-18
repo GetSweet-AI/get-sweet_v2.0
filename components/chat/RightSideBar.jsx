@@ -25,6 +25,7 @@ import { useAuth } from "@/context/useContext";
 // Importamos los submódulos
 import AgentsSidebarPanel from "./sidebar/AgentsPanel";
 import InfoRow from "./sidebar/InfoRow";
+import CampaignListPanel from "./sidebar/CampaignListPanel";
 import {
   getDefaultAgents,
   buildActivityFromAgents,
@@ -39,30 +40,25 @@ export default function RightSidebar({
   campaignId,
 }) {
   const router = useRouter();
-
-  // ✅ Obtenemos companyData y el estado loading
   const { companyData, loading: companyLoading } = useCompany();
   const { token } = useAuth();
 
   const showCampaignUI = mode === "campaign";
   const [tab, setTab] = useState(showCampaignUI ? "campaign" : "brand");
 
-  // Estado de la campaña
+  // Estado: Campaña Individual
   const [campaign, setCampaign] = useState(null);
   const [campaignLoading, setCampaignLoading] = useState(false);
+
+  // Estado: Lista de Campañas (Cuando no hay ID seleccionado)
+  const [allCampaigns, setAllCampaigns] = useState([]);
+  const [allCampaignsLoading, setAllCampaignsLoading] = useState(false);
 
   // Estado de agentes
   const [agents, setAgents] = useState([]);
   const [agentActivity, setAgentActivity] = useState([]);
 
-  // Debug: Ver qué llega en consola (puedes borrarlo luego)
-  useEffect(() => {
-    if (companyData) {
-      console.log("🏢 Company Data Loaded in Sidebar:", companyData);
-    }
-  }, [companyData]);
-
-  // Mantener el tab coherente
+  // --- LOGICA DE TABS INICIAL ---
   useEffect(() => {
     const t = setTimeout(() => {
       setTab(mode === "campaign" ? "campaign" : "brand");
@@ -70,45 +66,58 @@ export default function RightSidebar({
     return () => clearTimeout(t);
   }, [mode]);
 
-  // Cargar Campaña
+  // --- CARGAR DATOS ---
   useEffect(() => {
-    if (mode !== "campaign") return;
+    if (mode !== "campaign" || !token) return;
 
     const id = String(campaignId || activeContext || "");
-    if (!id || id === "general") {
-      setCampaign(null);
-      return;
-    }
+    const isGeneral = !id || id === "general" || id === "undefined";
 
-    const fetchCampaign = async () => {
+    const fetchData = async () => {
       try {
-        setCampaignLoading(true);
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const headers = { Authorization: `Bearer ${token}` };
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-        if (res.ok) {
-          const data = await res.json();
-          setCampaign(data);
+        if (!isGeneral) {
+          // A. CARGAR UNA SOLA CAMPAÑA
+          setCampaignLoading(true);
+          const res = await fetch(`${apiUrl}/api/v1/campaigns/${id}`, {
+            headers,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setCampaign(data);
+          } else {
+            setCampaign({ name: "Error loading", id });
+          }
+          setCampaignLoading(false);
         } else {
-          setCampaign({ name: "Error loading", id });
+          // B. CARGAR TODAS LAS CAMPAÑAS (LISTA)
+          setAllCampaignsLoading(true);
+          const res = await fetch(`${apiUrl}/api/v1/campaigns`, { headers });
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : data.data || []; // Robustez
+            setAllCampaigns(list);
+            setCampaign(null);
+
+            if (list.length === 0) {
+              setTab("brand");
+            }
+          }
+          setAllCampaignsLoading(false);
         }
       } catch (error) {
-        setCampaign({ name: "Connection error", id });
-      } finally {
+        console.error("Sidebar fetch error:", error);
         setCampaignLoading(false);
+        setAllCampaignsLoading(false);
       }
     };
 
-    fetchCampaign();
+    fetchData();
   }, [mode, campaignId, activeContext, token]);
 
-  // Cargar Agentes
+  // --- CARGAR AGENTES ---
   const activeCampaignKey = useMemo(
     () => String(campaignId || activeContext || ""),
     [campaignId, activeContext]
@@ -124,7 +133,7 @@ export default function RightSidebar({
     return () => clearTimeout(t);
   }, [showCampaignUI, activeCampaignKey]);
 
-  // Handlers
+  // --- HANDLERS ---
   const close = () => setIsOpen?.(false);
   const goBrandFullPage = () => {
     router.push("/chat/brand-details");
@@ -142,10 +151,10 @@ export default function RightSidebar({
   };
 
   const simulateRun = (agentId) => {
-    /* ... lógica de simulación ... */
+    /* ... */
   };
   const simulateReset = (agentId) => {
-    /* ... lógica de simulación ... */
+    /* ... */
   };
 
   return (
@@ -195,94 +204,93 @@ export default function RightSidebar({
       <div className="px-4 pb-4 pt-4 space-y-4 overflow-y-auto flex-1">
         {/* --- PANEL: CAMPAIGN --- */}
         {showCampaignUI && tab === "campaign" && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-4">
-            {/* Header Campaña */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs text-gray-500">Campaign</div>
-                <div className="text-base font-semibold text-gray-900 truncate">
-                  {campaign?.name || "Untitled campaign"}
+          <>
+            {/* CASO 1: Viendo una campaña específica */}
+            {campaign ? (
+              <div className="bg-white border border-gray-200 rounded-2xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs text-gray-500">Campaign</div>
+                    <div className="text-base font-semibold text-gray-900 truncate">
+                      {campaign.name || "Untitled campaign"}
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500 truncate">
+                      ID: {campaign.id || campaign._id}
+                    </div>
+                  </div>
+                  <button
+                    onClick={goCampaignFullPage}
+                    className="shrink-0 h-9 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 inline-flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" /> Edit
+                  </button>
                 </div>
-                <div className="mt-1 text-xs text-gray-500 truncate">
-                  ID: {campaign?.id || campaign?._id || "general"}
-                </div>
-              </div>
-              <button
-                onClick={goCampaignFullPage}
-                className="shrink-0 h-9 px-3 rounded-xl bg-gray-900 text-white text-xs font-bold hover:bg-gray-800 inline-flex items-center gap-2"
-              >
-                <ExternalLink className="w-4 h-4" /> Edit
-              </button>
-            </div>
 
-            {/* Datos Campaña */}
-            {campaignLoading || companyLoading ? ( // ✅ Esperamos a que ambos carguen
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading data...
+                {campaignLoading ? (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+                  </div>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    <InfoRow
+                      icon={Target}
+                      label="Objective"
+                      value={campaign.objective || "Not set"}
+                    />
+                    <InfoRow
+                      icon={Trophy}
+                      label="Primary goal"
+                      value={
+                        campaign.primaryGoal ||
+                        companyData?.primaryGoal ||
+                        "Not set"
+                      }
+                    />
+                    <InfoRow
+                      icon={BarChart3}
+                      label="KPI"
+                      value={campaign.primaryKpi || "Not set"}
+                    />
+                    <InfoRow
+                      icon={Calendar}
+                      label="Timeframe"
+                      value={
+                        campaign.timeframe ||
+                        companyData?.timeframe ||
+                        "Not set"
+                      }
+                    />
+                    <InfoRow
+                      icon={Megaphone}
+                      label="Primary channel"
+                      value={
+                        Array.isArray(campaign.channels) &&
+                        campaign.channels.length > 0
+                          ? campaign.channels[0]
+                          : campaign.channel || "Not set"
+                      }
+                    />
+                  </div>
+                )}
+
+                <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+                  This sidebar is read-only. Use Edit to update.
+                </div>
               </div>
             ) : (
-              <div className="mt-4 space-y-3">
-                <InfoRow
-                  icon={Target}
-                  label="Objective"
-                  value={campaign?.objective || "Not set"}
-                />
-
-                {/* ✅ Fallback Primary Goal */}
-                <InfoRow
-                  icon={Trophy}
-                  label="Primary goal"
-                  value={
-                    campaign?.primaryGoal ||
-                    companyData?.primaryGoal ||
-                    "Not set"
-                  }
-                />
-
-                {/* ✅ Fallback Metric: Buscamos successMetric (Company) O primaryKpi (Campaign) */}
-                <InfoRow
-                  icon={BarChart3}
-                  label="Success metric"
-                  value={
-                    campaign?.successMetric ||
-                    campaign?.primaryKpi || // 👈 Aquí está la clave para Campaign
-                    companyData?.successMetric || // 👈 Fallback a Company
-                    "Not set"
-                  }
-                />
-
-                {/* ✅ Fallback Timeframe */}
-                <InfoRow
-                  icon={Calendar}
-                  label="Timeframe"
-                  value={
-                    campaign?.timeframe || companyData?.timeframe || "Not set"
-                  }
-                />
-
-                <InfoRow
-                  icon={Megaphone}
-                  label="Primary channel"
-                  value={
-                    Array.isArray(campaign?.channels) &&
-                    campaign.channels.length > 0
-                      ? campaign.channels[0]
-                      : campaign?.channel || "Not set"
-                  }
-                />
-              </div>
+              // CASO 2: No hay ID seleccionado -> Mostrar lista de campañas (o empty state)
+              <CampaignListPanel
+                campaigns={allCampaigns}
+                isLoading={allCampaignsLoading}
+                onCloseSidebar={close}
+              />
             )}
-
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-              This sidebar is read-only. Use Edit to update.
-            </div>
-          </div>
+          </>
         )}
 
         {/* --- PANEL: BRAND --- */}
         {(!showCampaignUI || tab === "brand") && (
           <div className="bg-white border border-gray-200 rounded-2xl p-4">
-            {/* Header Brand */}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-xs text-gray-500">Brand</div>
@@ -292,7 +300,7 @@ export default function RightSidebar({
                     "Your Brand"}
                 </div>
                 {companyData?.industry && (
-                  <div className="mt-1 text-xs text-gray-500 break-words">
+                  <div className="mt-1 text-xs text-gray-500 wrap-break-word">
                     Industry: {companyData.industry}
                   </div>
                 )}

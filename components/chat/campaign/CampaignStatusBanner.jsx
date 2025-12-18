@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Trash2,
   Lock,
@@ -8,7 +9,9 @@ import {
   RefreshCw,
   AlertTriangle,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "@/context/useContext";
 
 function Pill({ status }) {
   const map = {
@@ -32,6 +35,11 @@ function Pill({ status }) {
       cls: "bg-amber-50 text-amber-800 border-amber-200",
       Icon: Lock,
     },
+    planning: {
+      label: "Planning",
+      cls: "bg-purple-50 text-purple-700 border-purple-200",
+      Icon: AlertTriangle,
+    },
   };
 
   const cfg = map[status] || map.draft;
@@ -49,24 +57,28 @@ function Pill({ status }) {
 
 export default function CampaignStatusBanner({
   provider = "Google Ads",
-  status = "draft", // "draft" | "generating" | "approved" | "locked"
+  status = "draft",
   message,
   onUnlock,
   onRegenerate,
-  onDeleteCampaign,
+  campaignId,
   deleteLabel = "Delete campaign",
 }) {
+  const router = useRouter();
+  const { token } = useAuth();
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const handleDelete = async (campaignId) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this campaign? This action cannot be undone."
-      )
-    )
+  const handleDelete = async () => {
+    if (!campaignId) {
+      setErr("Error: Campaign ID missing");
       return;
+    }
+
+    setBusy(true);
+    setErr("");
 
     try {
       const res = await fetch(
@@ -74,21 +86,26 @@ export default function CampaignStatusBanner({
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${token}`, // Tu token del contexto
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
       if (res.ok) {
-        // Redirigir al dashboard o recargar lista
-        router.push("/chat");
+        router.push("/chat/brand-ai");
       } else {
-        console.error("Failed to delete");
+        const json = await res.json();
+        setErr(json.message || "Failed to delete campaign");
+        setBusy(false);
       }
     } catch (error) {
       console.error(error);
+      setErr("Network error while deleting");
+      setBusy(false);
     }
   };
+
   return (
     <>
       <div className="border-b border-gray-100 bg-white">
@@ -131,7 +148,7 @@ export default function CampaignStatusBanner({
                 Regenerate
               </button>
 
-              {/* ✅ Delete (only here, not sidebar) */}
+              {/* Delete Button */}
               <button
                 type="button"
                 onClick={() => setConfirmOpen(true)}
@@ -147,12 +164,12 @@ export default function CampaignStatusBanner({
 
       {/* Confirm modal */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => !busy && setConfirmOpen(false)}
           />
-          <div className="relative w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-xl p-5">
+          <div className="relative w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-xl p-5 animate-in zoom-in-95 duration-200">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
                 <Trash2 className="w-5 h-5 text-red-700" />
@@ -184,7 +201,7 @@ export default function CampaignStatusBanner({
               >
                 {busy ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Deleting…
                   </>
                 ) : (

@@ -28,23 +28,26 @@ export default function CampaignPage() {
   const [activeTab, setActiveTab] = useState("chatbot");
   const [loading, setLoading] = useState(true);
 
+  // ✅ 1. Nuevo estado para guardar los datos de Google Ads
+  const [googleAdsData, setGoogleAdsData] = useState(null);
+
   const [campaignDetails, setCampaignDetails] = useState({
     name: "",
     objective: "",
     landingUrl: "",
     geo: "",
-    language: "English", // Valor por defecto (no está en BD aún)
+    language: "English",
     budget: "",
   });
 
-  // AdGroups (Datos falsos locales por ahora, como pediste)
+  // AdGroups (Datos falsos locales por ahora)
   const [adGroups, setAdGroups] = useState([
     { id: "ag1", name: "Core Service", theme: "Primary offer keywords" },
     { id: "ag2", name: "Competitor / Alt", theme: "Alternatives + comparison" },
   ]);
 
   // Estado del banner
-  const [draftStatus, setDraftStatus] = useState("planning"); // 'planning' es lo que viene de BD
+  const [draftStatus, setDraftStatus] = useState("planning");
   const [draftLocked, setDraftLocked] = useState(false);
   const [draftVersion, setDraftVersion] = useState(1);
 
@@ -52,34 +55,44 @@ export default function CampaignPage() {
   useEffect(() => {
     if (!token || !campaignId) return;
 
-    const fetchCampaignData = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const headers = { Authorization: `Bearer ${token}` };
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-        if (res.ok) {
-          const data = await res.json();
-          // Mapeamos los datos de la BD (Backend) al estado del Frontend
+        // ✅ 2. Ejecutamos ambas peticiones en paralelo (Campaña y Empresa)
+        const [campRes, compRes] = await Promise.all([
+          fetch(`${apiUrl}/api/v1/campaigns/${campaignId}`, { headers }),
+          fetch(`${apiUrl}/api/v1/company/profile`, { headers }), // Para sacar datos de Google Ads
+        ]);
+
+        // A. Procesar Campaña
+        if (campRes.ok) {
+          const data = await campRes.json();
           setCampaignDetails({
             name: data.name || "",
             objective: data.objective || "",
-            // Nota: En BD se llama 'landingPageUrl', en Front usamos 'landingUrl'
             landingUrl: data.landingPageUrl || "",
             geo: data.geo || "",
             budget: data.budget || "",
-            language: "English", // Mantenemos default por ahora
+            language: "English",
           });
-
           setDraftStatus(data.status || "planning");
         } else {
           console.error("Error fetching campaign");
+        }
+
+        // B. Procesar Empresa (Para Google Ads)
+        if (compRes.ok) {
+          const rawComp = await compRes.json();
+          const compObj = Array.isArray(rawComp)
+            ? rawComp[0]
+            : rawComp.data || rawComp;
+
+          if (compObj && compObj.googleAds) {
+            setGoogleAdsData(compObj.googleAds);
+          }
         }
       } catch (error) {
         console.error("Error de conexión:", error);
@@ -88,7 +101,7 @@ export default function CampaignPage() {
       }
     };
 
-    fetchCampaignData();
+    fetchAllData();
   }, [campaignId, token]);
 
   const handleSaveSettings = async () => {
@@ -97,15 +110,12 @@ export default function CampaignPage() {
     try {
       setIsSaving(true);
 
-      // 1. Preparamos el payload (Mapeo Frontend -> Backend)
       const payload = {
         name: campaignDetails.name,
         objective: campaignDetails.objective,
         geo: campaignDetails.geo,
         budget: campaignDetails.budget,
-        // IMPORTANTE: Frontend usa 'landingUrl', Backend espera 'landingPageUrl'
         landingPageUrl: campaignDetails.landingUrl,
-        // language: campaignDetails.language (Si el backend no lo soporta aún, no lo mandes o agrégalo al modelo)
       };
 
       const res = await fetch(
@@ -121,7 +131,6 @@ export default function CampaignPage() {
       );
 
       if (res.ok) {
-        // Opcional: Mostrar un Toast o notificación de éxito
         alert("Settings saved successfully! ✅");
       } else {
         throw new Error("Failed to save");
@@ -163,7 +172,6 @@ export default function CampaignPage() {
     setAdGroups((prev) => [...prev, { id: `ag${next}`, name, theme: "" }]);
   }
 
-  // Si está cargando, mostramos un loader simple o la estructura vacía
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
@@ -193,6 +201,7 @@ export default function CampaignPage() {
           locked={draftLocked}
           onUnlock={handleUnlock}
           onRegenerate={handleRegenerate}
+          campaignId={campaignId}
         />
 
         {/* 2. Tabs de Navegación */}
@@ -225,6 +234,7 @@ export default function CampaignPage() {
                 onGenerateDraft={handleGenerateDraft}
                 onSave={handleSaveSettings}
                 isSaving={isSaving}
+                googleAdsData={googleAdsData}
               />
             </div>
           )}

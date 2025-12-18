@@ -1,8 +1,10 @@
 "use client";
 
 import { Loader2, Save } from "lucide-react";
+// ✅ 1. Importamos el botón
+import ConnectGoogleAdsBtn from "@/components/chat/campaign/ConnectGoogleAdsBtn";
 
-// ✅ 1. Definimos el componente Helper AFUERA para evitar re-renders innecesarios
+// ✅ Definimos el componente Helper
 const InputField = ({ label, value, onChange, placeholder }) => (
   <div>
     <div className="text-[11px] font-bold text-gray-500 uppercase mb-1">
@@ -23,8 +25,10 @@ export default function SettingsPanel({
   adGroups,
   setAdGroups,
   onGenerateDraft,
-  onSave, // ✅ Recibimos la función de guardar
-  isSaving, // ✅ Recibimos el estado de carga
+  onSave,
+  isSaving,
+  // ✅ 2. Recibimos los datos de Google Ads para pasarlos al botón
+  googleAdsData,
 }) {
   // --- Lógica de AdGroups (Local por ahora) ---
   function addAdGroup() {
@@ -54,7 +58,7 @@ export default function SettingsPanel({
     <div className="px-6 py-4 space-y-4 pb-20">
       {/* --- CAMPAIGN SETTINGS --- */}
       <div className="w-full bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-        {/* Header con botón Save pequeño (visible en desktop) */}
+        {/* Header con botón Save */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-sm font-semibold text-gray-900">
@@ -135,6 +139,20 @@ export default function SettingsPanel({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* --- ✅ SECCIÓN NUEVA: INTEGRATIONS (Google Ads) --- */}
+      <div className="w-full bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-gray-900">
+            Integrations
+          </div>
+          <div className="text-sm text-gray-600">
+            Connect platforms to sync your ads.
+          </div>
+        </div>
+        {/* Pasamos los datos que vienen del padre */}
+        <ConnectGoogleAdsBtn googleAdsData={googleAdsData} />
       </div>
 
       {/* --- AD GROUPS (Local UI Only for now) --- */}
