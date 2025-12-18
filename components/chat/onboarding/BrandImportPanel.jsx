@@ -69,7 +69,7 @@ export default function BrandImportPanel({
     <div className="h-full flex items-center justify-center p-6 bg-white">
       <div className="w-full max-w-2xl">
         {/* Header + Reset */}
-        <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="mb-4 flex items-center justify-between gap-4 ">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
               Import your brand

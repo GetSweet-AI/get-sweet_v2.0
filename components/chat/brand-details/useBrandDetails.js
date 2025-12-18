@@ -29,7 +29,7 @@ export function useBrandDetails() {
   });
 
   const [toast, setToast] = useState(null);
-  const [isConfirming, setIsConfirming] = useState(false); // Usamos este estado para el loading del botón principal
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // =========================================================
   // 🔍 HYDRATION (Carga de Datos)
@@ -134,13 +134,12 @@ export function useBrandDetails() {
 
       setToast({
         type: "success",
-        message: "Saved! Continuing to Campaigns...",
+        message: "Saved! Redirecting to Brand AI...",
       });
 
-      // 5. Redirigir a Campaign
       setTimeout(() => {
         setToast(null);
-        router.push("/chat/campaign");
+        router.push("/chat/brand-ai");
       }, 1000);
     } catch (err) {
       console.error(err);
