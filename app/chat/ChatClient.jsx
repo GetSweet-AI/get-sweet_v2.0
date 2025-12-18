@@ -1,4 +1,3 @@
-// app/chat/ChatClient.jsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -17,7 +16,8 @@ export default function ChatClient() {
   const [activeContext, setActiveContext] = useState("general");
   const [isLeftOpen, setIsLeftOpen] = useState(false);
 
-  const [brandStatus, setBrandStatus] = useState("none"); // "none" | "importing" | "draft_ready" | "locked" | "failed"
+  // Estados: "none" | "importing" | "draft_ready" | "locked" | "failed"
+  const [brandStatus, setBrandStatus] = useState("none");
   const [brandDraft, setBrandDraft] = useState(null);
 
   const aiCompleted = searchParams.get("aiCompleted") === "true";
@@ -35,7 +35,9 @@ export default function ChatClient() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    // 1. FIX LAYOUT: h-screen + overflow-hidden para congelar la altura total y evitar scroll en el body
+    <div className="flex h-screen w-full overflow-hidden bg-gray-50">
+      {/* Sidebar Izquierdo */}
       <LeftSidebar
         isOpen={isLeftOpen}
         setIsOpen={setIsLeftOpen}
@@ -44,40 +46,52 @@ export default function ChatClient() {
         brandStatus={brandStatus}
       />
 
+      {/* Área Principal (Columna derecha) */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
+        {/* Header Fijo (No scrollea) */}
         <ChatHeader
           headerTitle={headerTitle}
           activeContext={activeContext}
           onOpenLeft={() => setIsLeftOpen(true)}
-          onOpenRight={() => {}} // right sidebar no longer used for confirmation flow
+          onOpenRight={() => {}}
         />
 
-        <div className="flex-1 min-h-0">
-          <BrandImportPanel
-            brandStatus={brandStatus}
-            onStartImport={() => {
-              setBrandStatus("importing");
-              setBrandDraft(null);
-            }}
-            onDraftReady={(draft) => {
-              setBrandDraft(draft);
-              setBrandStatus("draft_ready");
-              try {
-                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-              } catch {}
-            }}
-            onImportFailed={() => setBrandStatus("failed")}
-            onGoToAIBrandSetup={() => router.push("/chat/brand-ai")}
-            aiCompletedSignal={aiCompletedSignal}
-            onAICompletedHandled={clearAICompletedParam}
-            onConfirmBrand={(draft) => {
-              try {
-                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-              } catch {}
-              setBrandStatus("draft_ready");
-              router.push("/chat/brand-details?mode=review");
-            }}
-          />
+        {/* 2. AREA DE CONTENIDO CON SCROLL */}
+        {/* flex-1 toma el espacio restante. overflow-y-auto permite scroll solo aquí */}
+        <div className="flex-1 overflow-y-auto bg-gray-50/30 relative">
+          <div className="h-full">
+            <BrandImportPanel
+              brandStatus={brandStatus}
+              // Eventos de estado
+              onStartImport={() => {
+                setBrandStatus("importing");
+                setBrandDraft(null);
+              }}
+              onDraftReady={(draft) => {
+                setBrandDraft(draft);
+                setBrandStatus("draft_ready");
+                try {
+                  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+                } catch {}
+              }}
+              onImportFailed={() => setBrandStatus("failed")}
+              // Redirecciones
+              onGoToAIBrandSetup={() => router.push("/chat/brand-ai")}
+              // Señal de vuelta del chat AI
+              aiCompletedSignal={aiCompletedSignal}
+              onAICompletedHandled={clearAICompletedParam}
+              // ✅ FLUJO PRINCIPAL: Al confirmar importación, ir a REVISIÓN
+              onConfirmBrand={(draft) => {
+                try {
+                  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+                } catch {}
+                setBrandStatus("draft_ready");
+
+                // Redirige al panel de detalles en modo revisión
+                router.push("/chat/brand-details?mode=review");
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
