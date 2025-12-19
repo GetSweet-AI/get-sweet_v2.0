@@ -56,7 +56,7 @@ export default function GoalsSection({ isOpen, onToggle, formData, onChange }) {
           isEditing={true}
           forceLabel
           onChange={(val) => onChange("timeframe", val)}
-          placeholder="e.g., Q1, This month"
+          placeholder="e.g., Q1 2026, This month"
         />
       </div>
     </SidebarSection>

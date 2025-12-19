@@ -25,7 +25,7 @@ export default function CampaignPage() {
 
   const [isLeftOpen, setIsLeftOpen] = useState(false);
   const [isRightOpen, setIsRightOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("chatbot");
+  const [activeTab, setActiveTab] = useState("settings");
   const [loading, setLoading] = useState(true);
 
   // ✅ 1. Nuevo estado para guardar los datos de Google Ads
@@ -211,12 +211,12 @@ export default function CampaignPage() {
 
         {/* 3. Área de Contenido Dinámico */}
         <div className="flex-1 min-h-0">
-          {activeTab === "chatbot" && (
+          {/* {activeTab === "chatbot" && (
             <ChatbotPanel
               onApplyPatch={applyPatch}
               onAddAdGroup={addAdGroupFromChat}
             />
-          )}
+          )} */}
 
           {activeTab === "results" && (
             <div className="h-full overflow-y-auto">

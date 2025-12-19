@@ -28,7 +28,7 @@ export const EditableSelect = ({
               w-full 
               appearance-none 
               bg-white 
-              text-sm 
+              text-sm
               text-gray-900 
               font-normal
               py-2.5 

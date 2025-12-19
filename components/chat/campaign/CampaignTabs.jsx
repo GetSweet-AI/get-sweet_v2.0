@@ -3,7 +3,7 @@ import { MessageSquare, BarChart3, FileText } from "lucide-react";
 
 export default function CampaignTabs({ active, onChange }) {
   const tabs = [
-    { id: "chatbot", label: "Campaign AI", icon: MessageSquare },
+    // { id: "chatbot", label: "Campaign AI", icon: MessageSquare },
     { id: "results", label: "Campaign Performance", icon: BarChart3 },
     { id: "settings", label: "Campaign Details", icon: FileText },
   ];

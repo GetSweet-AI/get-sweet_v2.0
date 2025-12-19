@@ -17,6 +17,7 @@ import MissionSection from "@/components/chat/brand-details/sections/MissionSect
 // import GoalsSection from "@/components/chat/brand-details/sections/GoalsSection";
 import ListsSection from "@/components/chat/brand-details/sections/ListsSection";
 import ColorsSection from "@/components/chat/brand-details/sections/ColorsSection";
+import GoalsSection from "@/components/chat/brand-details/sections/GoalsSection";
 
 export default function BrandDetailsClient() {
   // 1. Estados del Layout
@@ -131,12 +132,12 @@ export default function BrandDetailsClient() {
             />
 
             {/* Goals */}
-            {/* <GoalsSection
+            <GoalsSection
               isOpen={sections.goals}
               onToggle={() => toggleSection("goals")}
               formData={formData}
               onChange={handleChange}
-            /> */}
+            />
 
             {/* Services */}
             <ListsSection

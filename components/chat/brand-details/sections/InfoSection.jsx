@@ -1,5 +1,8 @@
+import { ChevronDown } from "lucide-react"; // Importamos icono para el dropdown
 import { SidebarSection } from "@/components/chat/ui/SidebarSection";
 import { EditableField } from "@/components/chat/ui/EditableField";
+import { INDUSTRIES } from "@/components/utils/industries";
+import { EditableSelect } from "../../ui/EditableSelect";
 
 export default function InfoSection({ isOpen, onToggle, formData, onChange }) {
   const preview = [formData.brandName, formData.aka, formData.industry]
@@ -22,22 +25,17 @@ export default function InfoSection({ isOpen, onToggle, formData, onChange }) {
         onChange={(val) => onChange("brandName", val)}
         placeholder="Your official business name"
       />
-      <EditableField
-        label="Alias / AKA"
-        value={formData.aka}
-        isEditing={true}
-        forceLabel
-        onChange={(val) => onChange("aka", val)}
-        placeholder="Sweet Manager"
-      />
-      <EditableField
+
+      {/* ---  INDUSTRY DROPDOWN --- */}
+      <EditableSelect
         label="Industry"
         value={formData.industry}
+        options={INDUSTRIES}
         isEditing={true}
-        forceLabel
         onChange={(val) => onChange("industry", val)}
-        placeholder="e.g., SaaS, Retail"
+        placeholder="Select your industry"
       />
+
       <EditableField
         label="Target Audience"
         value={formData.targetAudience}

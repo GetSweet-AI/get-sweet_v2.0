@@ -11,7 +11,7 @@ export const EditableField = ({
 }) => (
   <div className={className}>
     {(isEditing || forceLabel) && (
-      <div className="text-[10px] text-gray-400 font-bold mb-1">{label}</div>
+      <div className="text-[11px] text-gray-400 font-bold mb-1">{label}</div>
     )}
 
     {isEditing ? (
@@ -19,14 +19,12 @@ export const EditableField = ({
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full text-[13px] p-2 border border-gray-300 rounded-lg
+        className="w-full text-sm p-2 border border-gray-300 rounded-lg
           focus:border-blue-500 outline-none bg-white text-gray-800 transition"
       />
     ) : (
-      <div className="text-[12px] text-gray-600 font-medium wrap-break-word">
-        {value || (
-          <span className="text-gray-300 italic text-[12px]">null</span>
-        )}
+      <div className="text-sm text-gray-600 font-medium wrap-break-word">
+        {value || <span className="text-gray-300 italic text-sm">null</span>}
       </div>
     )}
   </div>
