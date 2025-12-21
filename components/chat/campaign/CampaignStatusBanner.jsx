@@ -58,9 +58,7 @@ function Pill({ status }) {
 export default function CampaignStatusBanner({
   provider = "Google Ads",
   status = "draft",
-  message,
   onUnlock,
-  onRegenerate,
   campaignId,
   deleteLabel = "Delete campaign",
 }) {
@@ -139,15 +137,6 @@ export default function CampaignStatusBanner({
                 </button>
               ) : null}
 
-              <button
-                type="button"
-                onClick={onRegenerate}
-                className="h-9 px-3 rounded-xl bg-white border border-gray-200 text-xs font-bold text-gray-800 hover:bg-gray-50 inline-flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Regenerate
-              </button>
-
               {/* Delete Button */}
               <button
                 type="button"
@@ -164,7 +153,7 @@ export default function CampaignStatusBanner({
 
       {/* Confirm modal */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => !busy && setConfirmOpen(false)}

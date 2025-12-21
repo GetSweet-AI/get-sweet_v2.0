@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Save, Layers, Cpu, Sparkles, RefreshCw } from "lucide-react";
+import { Loader2, Save, Layers, Cpu, Sparkles, Bot } from "lucide-react";
 import ConnectGoogleAdsBtn from "@/components/chat/campaign/ConnectGoogleAdsBtn";
-import AdGroupsReview from "@/components/chat/campaign/AdGroupsReview";
-import GeneratedResults from "@/components/chat/campaign/GeneratedResults"; // 👈 Asegúrate de importar este
+import GeneratedResults from "@/components/chat/campaign/GeneratedResults";
 
-const InputField = ({ label, value, onChange, placeholder }) => (
+const InputField = ({ label, value, onChange, placeholder, type = "text" }) => (
   <div>
     <div className="text-[11px] font-bold text-gray-500 uppercase mb-1 tracking-wide">
       {label}
     </div>
     <input
+      type={type}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
@@ -23,14 +23,19 @@ const InputField = ({ label, value, onChange, placeholder }) => (
 export default function SettingsPanel({
   campaignDetails,
   setCampaignDetails,
-  adGroups,
-  setAdGroups,
+  googleAdsData,
+  // Props de la IA y Estado
   generatedData,
+  activeGenerationId,
+  isSaving,
+  isGenerating,
+  // ACCIONES (Funciones)
   onGenerateDraft,
   onSave,
-  isSaving,
-  googleAdsData,
-  isGenerating,
+  onApprove,
+  onDiscard,
+  onRegenerateGroup,
+  onUpdateGroup,
 }) {
   const [viewMode, setViewMode] = useState("simple"); // 'simple' | 'expert'
 
@@ -49,7 +54,7 @@ export default function SettingsPanel({
           </p>
         </div>
 
-        {/* 🎚️ UI TOGGLE (Simple vs Expert) */}
+        {/* 🎚️ UI TOGGLE */}
         <div className="bg-gray-100 p-1 rounded-xl flex items-center shadow-inner self-start md:self-auto">
           <button
             onClick={() => setViewMode("simple")}
@@ -136,7 +141,7 @@ export default function SettingsPanel({
               label="Geo Location"
               value={campaignDetails.geo}
               onChange={(e) => handleDetailChange("geo", e.target.value)}
-              placeholder="e.g., New York, NY"
+              placeholder="e.g., Madrid, Spain"
             />
             <InputField
               label="Language"
@@ -145,14 +150,15 @@ export default function SettingsPanel({
               placeholder="e.g., English"
             />
             <InputField
-              label="Daily Budget"
+              label="Daily Budget (USD)"
               value={campaignDetails.budget}
               onChange={(e) => handleDetailChange("budget", e.target.value)}
               placeholder="e.g., 50"
+              type="number" // Para ayudar al usuario
             />
           </div>
 
-          {/* 🔒 CAMPOS SOLO VISIBLES EN MODO EXPERTO */}
+          {/* 🔒 CAMPOS EXPERTOS */}
           {viewMode === "expert" && (
             <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 mt-4 animate-in fade-in slide-in-from-top-2">
               <div className="text-xs font-bold text-indigo-800 uppercase mb-3 flex items-center gap-2">
@@ -194,47 +200,57 @@ export default function SettingsPanel({
         <ConnectGoogleAdsBtn googleAdsData={googleAdsData} />
       </div>
 
-      {/* --- BLOQUE 3: LA LÓGICA DE GENERACIÓN --- */}
+      {/* --- BLOQUE 3: AI GENERATION & RESULTS --- */}
 
-      {/* CONDICIONAL A: Si NO hay data generada (o está vacía), 
-          mostramos el formulario para crear grupos (Input) 
-      */}
+      {/* CASO A: NO HAY CONTENIDO -> MOSTRAR BOTÓN GENERAR */}
       {!generatedData && (
-        <AdGroupsReview
-          adGroups={adGroups}
-          setAdGroups={setAdGroups}
-          onGenerateDraft={onGenerateDraft}
-          viewMode={viewMode} // 👈 Pasamos el lente simple/experto
-          isGenerating={isGenerating} // 👈 Pasamos el loading al botón interno
-        />
+        <div className="w-full bg-linear-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-10 text-center animate-in fade-in slide-in-from-bottom-2">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6">
+            <Bot className="w-8 h-8 text-indigo-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            Ready to build your campaign?
+          </h3>
+          <p className="text-gray-500 max-w-md mx-auto mb-8">
+            Sweet AI will analyze your brand profile and settings to generate 3
+            optimized Ad Groups, Keywords, and RSA Copies.
+          </p>
+
+          <button
+            onClick={() => onGenerateDraft()}
+            disabled={isGenerating}
+            className="h-14 px-8 rounded-2xl bg-gray-900 hover:bg-black text-white text-base font-bold shadow-xl shadow-indigo-200 transition-all hover:scale-105 flex items-center gap-3 mx-auto disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating Strategy...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Generate Campaign Structure
+              </>
+            )}
+          </button>
+        </div>
       )}
 
-      {/* CONDICIONAL B: Si YA hay data generada, 
-          ocultamos el input y mostramos el resultado (Output) 
-      */}
+      {/* CASO B: HAY CONTENIDO -> MOSTRAR RESULTADOS + APROBAR */}
       {generatedData && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-          {/* Header de la sección de resultados */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              AI Generated Campaign
-            </h2>
-            {/* Botón para Regenerar (Volver a llamar a la IA) */}
-            <button
-              onClick={onGenerateDraft}
-              disabled={isGenerating}
-              className="text-xs text-gray-500 hover:text-purple-600 flex items-center gap-1 border border-gray-200 px-3 py-1.5 rounded-lg bg-white transition-colors"
-            >
-              <RefreshCw
-                className={`w-3 h-3 ${isGenerating ? "animate-spin" : ""}`}
-              />
-              Regenerate
-            </button>
-          </div>
-
-          {/* Componente visualizador del JSON (Keywords, Ads, Extensions) */}
-          <GeneratedResults structure={generatedData} viewMode={viewMode} />
+          <GeneratedResults
+            // Data
+            structure={generatedData}
+            viewMode={viewMode}
+            campaignId={campaignDetails._id}
+            generationId={activeGenerationId}
+            onRegenerate={(feedback) => onGenerateDraft(feedback)}
+            onApprove={onApprove}
+            onDiscard={onDiscard}
+            onRegenerateGroup={onRegenerateGroup}
+            onUpdateGroup={onUpdateGroup}
+          />
         </div>
       )}
     </div>

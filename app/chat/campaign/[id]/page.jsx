@@ -28,12 +28,16 @@ export default function CampaignPage() {
   const [activeTab, setActiveTab] = useState("settings");
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false); // ✅ Nuevo estado para el loading de IA
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // --- Estados de Datos ---
   const [googleAdsData, setGoogleAdsData] = useState(null);
-  const [generatedData, setGeneratedData] = useState(null); // ✅ Aquí guardamos el JSON de la IA
-  const [draftVersion, setDraftVersion] = useState(0); // Versión actual (v1, v2...)
+
+  // Datos de la IA
+  const [generatedData, setGeneratedData] = useState(null);
+  const [activeGenerationId, setActiveGenerationId] = useState(null);
+  const [draftVersion, setDraftVersion] = useState(0);
   const [draftStatus, setDraftStatus] = useState("planning");
 
   // Inputs del Usuario
@@ -44,16 +48,11 @@ export default function CampaignPage() {
     geo: "",
     language: "English",
     budget: "",
-    bidStrategy: "", // Nuevo campo experto
-    globalNegatives: "", // Nuevo campo experto
+    bidStrategy: "",
+    globalNegatives: "",
   });
 
-  // Ad Groups Manuales (Input para la IA)
-  const [adGroups, setAdGroups] = useState([
-    { id: "ag1", name: "Core Service", theme: "Primary offer keywords" },
-  ]);
-
-  // --- 1. CARGA INICIAL (FETCH) ---
+  // --- 1. CARGA INICIAL ---
   useEffect(() => {
     if (!token || !campaignId) return;
 
@@ -63,16 +62,13 @@ export default function CampaignPage() {
         const headers = { Authorization: `Bearer ${token}` };
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-        // Carga paralela: Campaña + Perfil de Empresa (Google Ads)
         const [campRes, compRes] = await Promise.all([
           fetch(`${apiUrl}/api/v1/campaigns/${campaignId}`, { headers }),
           fetch(`${apiUrl}/api/v1/company/profile`, { headers }),
         ]);
 
-        // A. Procesar Datos de Campaña
         if (campRes.ok) {
           const data = await campRes.json();
-
           setCampaignDetails({
             name: data.name || "",
             objective: data.objective || "",
@@ -80,33 +76,26 @@ export default function CampaignPage() {
             geo: data.geo || "",
             budget: data.budget || "",
             language: data.language || "English",
-            // Campos opcionales si ya los guardaste
             bidStrategy: data.bidStrategy || "",
             globalNegatives: data.globalNegatives || "",
           });
-
           setDraftStatus(data.status || "planning");
 
-          // ✅ IMPORTANTE: Si ya hay una generación activa, cargarla
           if (data.activeGenerationId) {
-            // Si el populate trajo el objeto completo
             if (typeof data.activeGenerationId === "object") {
               setGeneratedData(data.activeGenerationId.structure);
+              setActiveGenerationId(data.activeGenerationId._id);
               setDraftVersion(data.activeGenerationId.version);
             }
           }
         }
 
-        // B. Procesar Datos de Empresa (Google Ads Token)
         if (compRes.ok) {
           const rawComp = await compRes.json();
           const compObj = Array.isArray(rawComp)
             ? rawComp[0]
             : rawComp.data || rawComp;
-
-          if (compObj?.googleAds) {
-            setGoogleAdsData(compObj.googleAds);
-          }
+          if (compObj?.googleAds) setGoogleAdsData(compObj.googleAds);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -119,11 +108,10 @@ export default function CampaignPage() {
     fetchAllData();
   }, [campaignId, token]);
 
-  // --- 2. GUARDAR CONFIGURACIÓN (SAVE) ---
+  // --- 2. GUARDAR CONFIGURACIÓN ---
   const handleSaveSettings = async () => {
     if (!token || !campaignId) return;
     setIsSaving(true);
-
     try {
       const payload = {
         name: campaignDetails.name,
@@ -131,7 +119,6 @@ export default function CampaignPage() {
         geo: campaignDetails.geo,
         budget: campaignDetails.budget,
         landingPageUrl: campaignDetails.landingUrl,
-        // Opcional: guardar adGroups manuales si tu backend lo soporta
       };
 
       const res = await fetch(
@@ -147,7 +134,6 @@ export default function CampaignPage() {
       );
 
       if (!res.ok) throw new Error("Failed to save");
-
       toast.success("Settings saved successfully");
     } catch (error) {
       console.error(error);
@@ -157,63 +143,134 @@ export default function CampaignPage() {
     }
   };
 
-  // --- 3. GENERAR ESTRUCTURA (LA MAGIA DE LA IA) ---
-  const handleGenerateDraft = async (feedbackText = "") => {
+  // --- 3. GENERAR ESTRUCTURA COMPLETA ---
+  const handleGenerateDraft = async (feedbackInput) => {
+    const feedbackText = typeof feedbackInput === "string" ? feedbackInput : "";
+
     if (!campaignDetails.landingUrl) {
       return toast.warning("Please enter a Landing Page URL first.");
     }
 
     setIsGenerating(true);
-
     try {
-      // Paso A: Aseguramos que los últimos cambios estén guardados
       await handleSaveSettings();
 
-      // Paso B: Llamamos al endpoint de generación
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/generate`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            userFeedback: feedbackText,
-          }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ userFeedback: feedbackText }),
         }
       );
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.message || "Generation failed");
 
-      // Paso C: Actualizamos el estado con el JSON recibido
-      const aiStructure = data.data.structure;
-      setGeneratedData(aiStructure);
+      setGeneratedData(data.data.structure);
+      setActiveGenerationId(data.data._id);
       setDraftVersion(data.data.version);
-      setDraftStatus("review"); // Cambiamos estado visual
+      setDraftStatus("review");
 
       toast.success(`Campaign V${data.data.version} generated!`);
     } catch (error) {
       console.error("AI Generation Error:", error);
-      toast.error("AI failed to generate campaign. Try again.");
+      toast.error("AI failed to generate campaign.");
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // --- Handlers de UI ---
+  // --- 4. REGENERAR UN SOLO GRUPO (NUEVO) ---
+  const handleRegenerateGroup = async (groupIndex, groupData) => {
+    // toast.info("Regenerating group... (Simulated for MVP)");
+    // NOTA: Para el MVP real, podrías llamar al endpoint general y decirle a la IA:
+    // "Regenera solo el grupo X pero mantén los otros intactos".
+    // Por ahora, para no complicar el backend, podemos llamar a generate completo
+    // pero pasarle un feedback específico.
+
+    const prompt = `Regenerate ONLY the Ad Group named "${groupData.name}". Keep the others exactly as they were.`;
+    await handleGenerateDraft(prompt);
+  };
+
+  // --- 5. ACTUALIZAR UN SOLO GRUPO (EDICIÓN MANUAL) ---
+  const handleUpdateGroup = async (groupIndex, updatedGroup) => {
+    // Creamos una copia local profunda
+    const newData = JSON.parse(JSON.stringify(generatedData));
+    newData.adGroups[groupIndex] = updatedGroup;
+
+    // Actualizamos estado local inmediatamente (Optimistic UI)
+    setGeneratedData(newData);
+
+    // Guardamos en Backend
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/generations/${activeGenerationId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ structure: newData }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to save changes");
+      // toast.success("Changes saved"); // Ya lo hace el componente hijo
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to sync changes with server");
+    }
+  };
+
+  // --- 6. APROBAR Y PUBLICAR ---
+  const handleApproveAndPublish = async () => {
+    if (!confirm("Are you ready to launch this campaign to Google Ads?"))
+      return;
+
+    setIsPublishing(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/publish`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Publish failed");
+
+      setDraftStatus("active");
+      toast.success("🚀 Campaign Published Successfully to Google Ads!");
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        "Failed to publish campaign. Check your Google Ads connection."
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   function handleUnlock() {
-    // Permite al usuario "descartar" la generación y volver a editar inputs
-    setGeneratedData(null);
-    setDraftStatus("planning");
+    if (confirm("Discard current draft and start over?")) {
+      setGeneratedData(null);
+      setActiveGenerationId(null);
+      setDraftStatus("planning");
+    }
   }
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
       </div>
     );
-  }
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -221,56 +278,55 @@ export default function CampaignPage() {
         isOpen={isLeftOpen}
         setIsOpen={setIsLeftOpen}
         activeContext={campaignId}
-        setActiveContext={(ctx) => {
-          if (ctx === "general") router.push("/chat");
-          else router.push(`/chat/campaign/${ctx}`);
-        }}
+        setActiveContext={(ctx) =>
+          ctx === "general"
+            ? router.push("/chat")
+            : router.push(`/chat/campaign/${ctx}`)
+        }
       />
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
-        {/* 1. Banner Superior (Status) */}
         <CampaignStatusBanner
           status={draftStatus}
           provider="Google Ads"
           version={draftVersion}
-          locked={!!generatedData} // Bloqueado si ya hay data generada
+          locked={!!generatedData}
           onUnlock={handleUnlock}
-          onRegenerate={handleGenerateDraft} // Reutilizamos la función
+          onRegenerate={handleGenerateDraft}
           campaignId={campaignId}
         />
 
-        {/* 2. Tabs */}
         <div className="pt-3">
           <CampaignTabs active={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* 3. Contenido Principal */}
         <div className="flex-1 min-h-0">
-          {/* TAB DE SETTINGS (Donde ocurre la acción) */}
           {activeTab === "settings" && (
             <div className="h-full overflow-y-auto">
               <SettingsPanel
                 // Datos
                 campaignDetails={campaignDetails}
                 setCampaignDetails={setCampaignDetails}
-                adGroups={adGroups}
-                setAdGroups={setAdGroups}
                 googleAdsData={googleAdsData}
-                generatedData={generatedData} // ✅ Pasamos el Output de la IA
-                // Acciones
-                onGenerateDraft={handleGenerateDraft} // ✅ Conectado al Backend
+                // IA & Acciones
+                generatedData={generatedData}
+                activeGenerationId={activeGenerationId}
+                onGenerateDraft={handleGenerateDraft}
                 onSave={handleSaveSettings}
-                // Estados de Carga
+                onApprove={handleApproveAndPublish}
+                onDiscard={handleUnlock} // Pasar función de descarte
+                // Nuevas Props para manejo granular
+                onRegenerateGroup={handleRegenerateGroup}
+                onUpdateGroup={handleUpdateGroup}
+                // Estados
                 isSaving={isSaving}
                 isGenerating={isGenerating}
               />
             </div>
           )}
 
-          {/* TAB DE RESULTADOS (Opcional, si quieres una vista separada) */}
           {activeTab === "results" && (
             <div className="h-full overflow-y-auto">
-              {/* Aquí podrías reutilizar GeneratedResults si quisieras verlo aislado */}
               <ResultsPanel />
             </div>
           )}

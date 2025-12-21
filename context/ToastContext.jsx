@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
-import ToastContainer from "@/components/ui/ToastContainer"; // Lo crearemos en el paso 2
+import ToastContainer from "@/components/ui/ToastContainer";
 
 const ToastContext = createContext();
 
@@ -19,10 +19,10 @@ export const ToastProvider = ({ children }) => {
       const id = Date.now().toString(); // ID único basado en tiempo
       setToasts((prev) => [...prev, { id, message, type }]);
 
-      // Auto-eliminar después de 3 segundos
+      // Auto-eliminar después de 2 seg
       setTimeout(() => {
         removeToast(id);
-      }, 3000);
+      }, 2000);
     },
     [removeToast]
   );
