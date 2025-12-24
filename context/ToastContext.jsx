@@ -19,10 +19,10 @@ export const ToastProvider = ({ children }) => {
       const id = Date.now().toString(); // ID único basado en tiempo
       setToasts((prev) => [...prev, { id, message, type }]);
 
-      // Auto-eliminar después de 2 seg
+      // Auto-eliminar después de 4 seg
       setTimeout(() => {
         removeToast(id);
-      }, 2000);
+      }, 4000);
     },
     [removeToast]
   );

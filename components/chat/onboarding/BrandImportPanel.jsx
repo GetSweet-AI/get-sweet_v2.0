@@ -125,7 +125,7 @@ export default function BrandImportPanel({
                 title: "Reset all brand data?",
                 body: "This will delete all saved brand info (Website, PDFs, AI Chat) from the database and clear the current form. This action cannot be undone.",
                 confirmText: isResetting ? "Clearing..." : "Reset Everything",
-                action: handleDeepReset, // ✅ Acción conectada al Backend
+                action: handleDeepReset,
                 isDanger: true,
               })
             }

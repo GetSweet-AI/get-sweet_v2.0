@@ -10,6 +10,7 @@ import {
   Bot,
   AlertCircle,
   Check,
+  Lock,
 } from "lucide-react";
 import ConnectGoogleAdsBtn from "@/components/chat/campaign/ConnectGoogleAdsBtn";
 import GeneratedResults from "@/components/chat/campaign/GeneratedResults";
@@ -19,6 +20,7 @@ import { CAMPAIGN_OBJECTIVES } from "@/components/utils/campaignOptions";
 import { CurrencyInput } from "@/components/ui/inputs/CurrencyInput";
 import { InputField } from "@/components/ui/inputs/InputField";
 import { SelectField } from "@/components/ui/inputs/SelectField";
+import CampaignHelpCard from "@/components/chat/campaign/CampaignHelpCard"; // Asegúrate de importar esto
 
 // --- COMPONENTES UI REUTILIZABLES ---
 
@@ -47,32 +49,27 @@ export default function SettingsPanel({
   onUpdateGroup,
 }) {
   const [viewMode, setViewMode] = useState("simple");
-
-  // 1️⃣ ESTADO: Snapshot de los datos originales (para comparar cambios)
   const [originalData, setOriginalData] = useState(null);
 
-  // 2️⃣ EFECTO: Guardar snapshot inicial cuando llegan los datos por primera vez
+  // DETECTAR SI ESTÁ PUBLICADA (FULL)
+  const isPublished = campaignDetails.status === "published";
+
   useEffect(() => {
-    // Solo guardamos si no tenemos un snapshot y los datos ya tienen algo (ej: nombre)
     if (!originalData && campaignDetails?.name) {
       setOriginalData(JSON.parse(JSON.stringify(campaignDetails)));
     }
   }, [campaignDetails, originalData]);
 
   const handleDetailChange = (key, value) => {
+    if (isPublished) return;
     setCampaignDetails((prev) => ({ ...prev, [key]: value }));
   };
 
-  // 3️⃣ WRAPPER PARA GUARDAR: Actualiza el snapshot si el guardado es exitoso
   const handleSaveClick = async () => {
     await onSave();
-    // Una vez guardado en backend, actualizamos nuestra referencia local
-    // Así el botón vuelve a deshabilitarse hasta nuevos cambios
     setOriginalData(JSON.parse(JSON.stringify(campaignDetails)));
   };
 
-  // 4️⃣ VALIDACIONES
-  // A. Campos requeridos llenos
   const isFormValid =
     campaignDetails.name?.trim() &&
     campaignDetails.objective?.trim() &&
@@ -81,138 +78,143 @@ export default function SettingsPanel({
     campaignDetails.language?.trim() &&
     campaignDetails.budget;
 
-  // B. Detección de Cambios (Dirty Checking)
-  // Comparamos el objeto actual con el original
   const hasChanges =
     JSON.stringify(campaignDetails) !== JSON.stringify(originalData);
-
-  // C. ¿Podemos guardar? (Hay cambios + Formulario válido + No está guardando)
-  const canSave = hasChanges && isFormValid && !isSaving;
+  const canSave = hasChanges && isFormValid && !isSaving && !isPublished;
 
   return (
     <div className="px-6 py-6 space-y-6 pb-24 max-w-4xl mx-auto">
       {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campaign Setup</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">Campaign Setup</h1>
+            {/* 🚀 BADGE DE ESTADO */}
+            {isPublished && (
+              <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                <Check className="w-3 h-3" /> PUBLISHED
+              </span>
+            )}
+          </div>
           <p className="text-gray-500 text-sm">
             Configure your AI agent strategy.
           </p>
         </div>
 
-        <div className="bg-gray-100 p-1 rounded-xl flex items-center shadow-inner self-start md:self-auto">
-          <button
-            onClick={() => setViewMode("simple")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
-              viewMode === "simple"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            Simple
-          </button>
-          <button
-            onClick={() => setViewMode("expert")}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
-              viewMode === "expert"
-                ? "bg-white text-indigo-600 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Cpu className="w-4 h-4" />
-            Expert
-          </button>
-        </div>
+        {/* Toggle de vista (ocultar si está publicada para limpiar ruido) */}
+        {!isPublished && (
+          <div className="bg-gray-100 p-1 rounded-xl flex items-center shadow-inner self-start md:self-auto">
+            <button
+              onClick={() => setViewMode("simple")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
+                viewMode === "simple"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Layers className="w-4 h-4" /> Simple
+            </button>
+            <button
+              onClick={() => setViewMode("expert")}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
+                viewMode === "expert"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Cpu className="w-4 h-4" /> Expert
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* --- BLOQUE 1: CAMPAIGN SETTINGS --- */}
-      <div className="w-full bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+      {/* --- BLOQUE 1: CAMPAIGN SETTINGS (READ ONLY IF PUBLISHED) --- */}
+      <div
+        className={`w-full bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative ${
+          isPublished ? "opacity-75 grayscale-[0.3]" : ""
+        }`}
+      >
+        {/* 🚀 OVERLAY BLOQUEO VISUAL */}
+        {isPublished && (
+          <div className="absolute top-4 right-4 z-10">
+            <div className="bg-gray-100 text-gray-500 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+              <Lock className="w-3 h-3" /> READ ONLY
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="text-base font-semibold text-gray-900">
               Campaign Configuration
             </div>
-            {/* Mensaje dinámico de estado */}
-            <div className="text-sm mt-1 flex items-center gap-2">
-              {!isFormValid ? (
-                <span className="text-amber-600 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Fill required fields
-                </span>
-              ) : hasChanges ? (
-                <span className="text-purple-600 flex items-center gap-1 animate-pulse">
-                  <div className="w-2 h-2 rounded-full bg-purple-500" /> Unsaved
-                  changes
-                </span>
-              ) : (
-                <span className="text-gray-400 flex items-center gap-1">
-                  <Check className="w-3 h-3" /> All saved
-                </span>
-              )}
-            </div>
+            {!isPublished && (
+              <div className="text-sm mt-1 flex items-center gap-2">
+                {!isFormValid ? (
+                  <span className="text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Fill required fields
+                  </span>
+                ) : hasChanges ? (
+                  <span className="text-purple-600 flex items-center gap-1 animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />{" "}
+                    Unsaved changes
+                  </span>
+                ) : (
+                  <span className="text-gray-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> All saved
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* 🛑 BOTÓN SAVE INTELIGENTE */}
-          <button
-            type="button"
-            onClick={handleSaveClick}
-            disabled={!canSave} // Bloqueo triple (Sin cambios, Inválido, Cargando)
-            title={
-              !hasChanges
-                ? "No changes to save"
-                : !isFormValid
-                ? "Please fill in all required fields"
-                : "Save changes to database"
-            }
-            className={`h-10 px-5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm
-              ${
+          {!isPublished && (
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={!canSave}
+              className={`h-10 px-5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all shadow-sm ${
                 canSave
-                  ? "bg-gray-900 text-white hover:bg-black hover:shadow-md transform hover:scale-105" // Activo
-                  : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none" // Inactivo
-              }
-            `}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" /> Save Changes
-              </>
-            )}
-          </button>
+                  ? "bg-gray-900 text-white hover:bg-black hover:shadow-md transform hover:scale-105"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" /> Save Changes
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        <div className="space-y-5">
+        {/* INPUTS (Deshabilitados si isPublished es true) */}
+        <fieldset disabled={isPublished} className="space-y-5">
           <InputField
             label="Campaign name"
             value={campaignDetails.name}
             onChange={(e) => handleDetailChange("name", e.target.value)}
-            placeholder="e.g., Q4 Lead Generation"
             required={true}
           />
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Usamos el SelectField reutilizable */}
             <SelectField
               label="Objective"
               value={campaignDetails.objective}
               onChange={(e) => handleDetailChange("objective", e.target.value)}
               options={CAMPAIGN_OBJECTIVES}
-              placeholder="Select objective..."
               required={true}
             />
-
             <InputField
               label="Landing page URL"
               value={campaignDetails.landingUrl}
               onChange={(e) => handleDetailChange("landingUrl", e.target.value)}
-              placeholder="https://yourbusiness.com/offer"
               required={true}
             />
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="md:col-span-2 relative">
               <LocationPicker
@@ -220,12 +222,10 @@ export default function SettingsPanel({
                 onChange={(val) => handleDetailChange("geo", val)}
               />
             </div>
-
             <LanguagePicker
               value={campaignDetails.language}
               onChange={(val) => handleDetailChange("language", val)}
             />
-
             <div>
               <Label required>Budget daily (USD)</Label>
               <CurrencyInput
@@ -235,9 +235,8 @@ export default function SettingsPanel({
               />
             </div>
           </div>
-
-          {/* CAMPOS EXPERTOS */}
-          {viewMode === "expert" && (
+          {/* EXPERT MODE */}
+          {!isPublished && viewMode === "expert" && (
             <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 mt-4 animate-in fade-in slide-in-from-top-2">
               <div className="text-xs font-bold text-indigo-800 uppercase mb-3 flex items-center gap-2">
                 <Cpu className="w-3 h-3" /> Advanced Settings
@@ -249,7 +248,6 @@ export default function SettingsPanel({
                   onChange={(e) =>
                     handleDetailChange("bidStrategy", e.target.value)
                   }
-                  placeholder="e.g. Target CPA"
                 />
                 <InputField
                   label="Negative Keywords (Global)"
@@ -257,12 +255,11 @@ export default function SettingsPanel({
                   onChange={(e) =>
                     handleDetailChange("globalNegatives", e.target.value)
                   }
-                  placeholder="comma, separated, values"
                 />
               </div>
             </div>
           )}
-        </div>
+        </fieldset>
       </div>
 
       {/* --- BLOQUE 2: INTEGRATIONS --- */}
@@ -278,10 +275,11 @@ export default function SettingsPanel({
         <ConnectGoogleAdsBtn googleAdsData={googleAdsData} />
       </div>
 
-      {/* --- BLOQUE 3: AI GENERATION & RESULTS --- */}
-      {!generatedData && (
+      {/* 🚀 LÓGICA DE VISUALIZACIÓN FINAL 🚀 */}
+
+      {!generatedData ? (
+        // A) ESTADO INICIAL: Botón Generar (Solo si no hay datos)
         <div className="w-full bg-linear-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-10 text-center animate-in fade-in slide-in-from-bottom-2">
-          {/* ... (Icono Bot) ... */}
           <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6">
             <Bot className="w-8 h-8 text-indigo-600" />
           </div>
@@ -292,50 +290,51 @@ export default function SettingsPanel({
             Sweet AI will analyze your brand profile and settings to generate 3
             optimized Ad Groups, Keywords, and RSA Copies.
           </p>
-
-          {/* MENSAJE DE ADVERTENCIA */}
           {!isFormValid && (
             <div className="mb-6 bg-amber-50 text-amber-800 px-4 py-2 rounded-lg text-sm inline-flex items-center gap-2 border border-amber-200 animate-in fade-in slide-in-from-top-1">
-              <AlertCircle className="w-4 h-4" />
-              Please fill in all required fields marked with * to continue.
+              <AlertCircle className="w-4 h-4" /> Please fill in all required
+              fields marked with * to continue.
             </div>
           )}
-
           <button
             onClick={() => onGenerateDraft()}
             disabled={isGenerating || !isFormValid}
             className={`h-14 px-8 rounded-2xl text-base font-bold shadow-xl transition-all flex items-center gap-3 mx-auto 
-                ${
-                  isFormValid
-                    ? "bg-gray-900 hover:bg-black text-white hover:scale-105 shadow-indigo-200"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
-                }
+              ${
+                isFormValid
+                  ? "bg-gray-900 hover:bg-black text-white hover:scale-105 shadow-indigo-200"
+                  : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+              }
             `}
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Generating Strategy...
+                <Loader2 className="w-5 h-5 animate-spin" /> Generating
+                Strategy...
               </>
             ) : (
               <>
-                <Sparkles className="w-5 h-5" />
-                Generate Ads Draft
+                <Sparkles className="w-5 h-5" /> Generate Ads Draft
               </>
             )}
           </button>
         </div>
-      )}
+      ) : (
+        // B) SI HAY DATOS (Ya sea borrador, parcial o full publicado)
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          {/* 1. Si está FULL publicado, mostramos la carta de éxito ARRIBA */}
+          {isPublished && (
+            <CampaignHelpCard
+              googleResourceId={campaignDetails.googleAdsResourceId}
+            />
+          )}
 
-      {/* Resultados generados */}
-      {generatedData && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
           <GeneratedResults
             structure={generatedData}
             viewMode={viewMode}
             campaignId={campaignDetails._id}
             generationId={activeGenerationId}
-            onRegenerate={(feedback) => onGenerateDraft(feedback)}
+            onRegenerate={onGenerateDraft}
             onApprove={onApprove}
             onDiscard={onDiscard}
             onRegenerateGroup={onRegenerateGroup}

@@ -11,6 +11,8 @@ import {
   RefreshCw,
   CheckCircle,
   X,
+  Loader2,
+  Lock, // 🔒 Icono para indicar bloqueo
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/context/ToastContext";
@@ -23,20 +25,49 @@ export default function GeneratedResults({
   onRegenerateGroup,
   onUpdateGroup,
 }) {
-  // Estado local para manejar selecciones (los favoritos)
+  // Estado local para manejar selecciones
   const [selectedIndices, setSelectedIndices] = useState([]);
+  const [isPublishing, setIsPublishing] = useState(false);
 
-  const toggleSelection = (idx) => {
+  // Seleccionar automáticamente todos los grupos NO publicados al cargar
+  useEffect(() => {
+    if (structure?.adGroups) {
+      const availableIndices = structure.adGroups
+        .map((g, i) => (!g.isPublished ? i : null))
+        .filter((i) => i !== null);
+      setSelectedIndices(availableIndices);
+    }
+  }, [structure]);
+
+  // Toggle de selección (protegido contra grupos publicados)
+  const toggleSelection = (idx, isPublished) => {
+    if (isPublished) return; // 🔒 No permitir cambiar selección si ya está publicado
     setSelectedIndices((prev) =>
       prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
     );
   };
 
+  const handleLaunch = async () => {
+    try {
+      setIsPublishing(true);
+      const groupsToPublish =
+        selectedIndices.length > 0 ? selectedIndices : null;
+      await onApprove(groupsToPublish);
+    } catch (error) {
+      console.error("Error en launch:", error);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   if (!structure) return null;
+
+  // Verificar si ya no queda nada por publicar
+  const allPublished = structure.adGroups?.every((g) => g.isPublished);
 
   return (
     <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 pb-10">
-      {/* 1. HEADER */}
+      {/* 1. HEADER ESTRATEGIA */}
       <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xl">🧠</span>
@@ -48,12 +79,12 @@ export default function GeneratedResults({
         </p>
       </div>
 
-      {/* 2. GRUPOS DE ANUNCIOS */}
+      {/* 2. LISTA DE GRUPOS DE ANUNCIOS */}
       <div className="space-y-4">
         <h3 className="font-bold text-gray-900 text-lg flex justify-between items-center">
           Generated Structure
           <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            {selectedIndices.length} Selected
+            {selectedIndices.length} Selected to Launch
           </span>
         </h3>
 
@@ -63,8 +94,10 @@ export default function GeneratedResults({
             index={idx}
             group={group}
             viewMode={viewMode}
+            // Un grupo está "seleccionado" si está en el array O si ya está publicado (para que se vea verde)
             isSelected={selectedIndices.includes(idx)}
-            onToggleSelect={() => toggleSelection(idx)}
+            isPublished={group.isPublished === true} // 🚩 Pasamos la bandera
+            onToggleSelect={() => toggleSelection(idx, group.isPublished)}
             onRegenerate={() =>
               onRegenerateGroup && onRegenerateGroup(idx, group)
             }
@@ -75,7 +108,7 @@ export default function GeneratedResults({
         ))}
       </div>
 
-      {/* 3. EXTENSIONES */}
+      {/* 3. EXTENSIONES (Solo informativo) */}
       {structure.extensions?.sitelinks?.length > 0 && (
         <div className="border border-gray-200 rounded-2xl p-5 bg-white opacity-80 hover:opacity-100 transition-opacity">
           <h4 className="font-bold text-gray-800 mb-3 text-sm uppercase">
@@ -97,51 +130,66 @@ export default function GeneratedResults({
         </div>
       )}
 
-      {/* 4. ACTION BAR (Aquí estaba el problema) */}
-      <div className="sticky bottom-4 z-10 bg-gray-900/95 backdrop-blur text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 mt-8 border border-gray-700">
-        <div className="hidden md:block">
-          <div className="text-sm font-bold">Review Generated Draft</div>
-          <div className="text-xs text-gray-300">
-            {selectedIndices.length > 0
-              ? `You have selected ${selectedIndices.length} groups to keep.`
-              : "Review and approve all groups."}
+      {/* 4. ACTION BAR (Solo visible si hay algo que publicar) */}
+      {!allPublished && (
+        <div className="sticky bottom-4 z-10 bg-gray-900/95 backdrop-blur text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 mt-8 border border-gray-700 animate-in slide-in-from-bottom-2">
+          <div className="hidden md:block">
+            <div className="text-sm font-bold">Review Generated Draft</div>
+            <div className="text-xs text-gray-300">
+              {selectedIndices.length > 0
+                ? `Ready to launch ${selectedIndices.length} new groups.`
+                : "Select groups to launch."}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={onDiscard}
+              disabled={isPublishing}
+              className="flex-1 md:flex-none h-10 px-4 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" /> Discard
+            </button>
+
+            <button
+              onClick={handleLaunch}
+              disabled={isPublishing || selectedIndices.length === 0}
+              className={`
+                flex-1 md:flex-none h-10 px-6 rounded-xl 
+                text-black text-sm font-bold flex items-center justify-center gap-2 
+                transition-all hover:scale-105 disabled:scale-100 disabled:opacity-70 disabled:cursor-not-allowed
+                ${
+                  isPublishing
+                    ? "bg-emerald-600"
+                    : "bg-emerald-500 hover:bg-emerald-400"
+                }
+              `}
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Publishing...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Launch Selected ({selectedIndices.length})
+                  <ArrowRight className="w-4 h-4 opacity-50" />
+                </>
+              )}
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <button
-            onClick={onDiscard}
-            className="flex-1 md:flex-none h-10 px-4 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Discard
-          </button>
-
-          <button
-            onClick={() => {
-              const groupsToPublish =
-                selectedIndices.length > 0 ? selectedIndices : null;
-              onApprove(groupsToPublish);
-            }}
-            className="flex-1 md:flex-none h-10 px-6 rounded-xl bg-green-500 hover:bg-green-400 text-black text-sm font-bold flex items-center justify-center gap-2 transition-transform hover:scale-105"
-          >
-            <Check className="w-4 h-4" />
-            {selectedIndices.length > 0
-              ? `Launch (${selectedIndices.length})`
-              : "Approve & Launch All"}
-            <ArrowRight className="w-4 h-4 opacity-50" />
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
+// --- TARJETA INDIVIDUAL (CON LOGICA DE ESTADO PUBLICADO) ---
 function AdGroupResultCard({
   group,
-  index,
   viewMode,
   isSelected,
+  isPublished, // 👈 Nueva prop
   onToggleSelect,
   onRegenerate,
   onSaveEdit,
@@ -149,13 +197,10 @@ function AdGroupResultCard({
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-
-  // Estado local para edición
   const [editedGroup, setEditedGroup] = useState(group);
   const menuRef = useRef(null);
   const toast = useToast();
 
-  // Cerrar menú al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -166,7 +211,6 @@ function AdGroupResultCard({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Manejadores de Edición
   const handleSave = () => {
     onSaveEdit(editedGroup);
     setIsEditing(false);
@@ -174,42 +218,47 @@ function AdGroupResultCard({
   };
 
   const handleCancelEdit = () => {
-    setEditedGroup(group); // Revertir
+    setEditedGroup(group);
     setIsEditing(false);
   };
 
-  // Renderizar contenido Editable vs Solo Lectura
   return (
     <div
       className={`
-        bg-white border rounded-2xl shadow-sm transition-all relative
-        ${
-          isSelected
-            ? "border-indigo-500 ring-1 ring-indigo-500 shadow-indigo-100"
-            : "border-gray-200 hover:shadow-md"
-        }
-    `}
+          border rounded-2xl shadow-sm transition-all relative
+          ${
+            isPublished
+              ? "bg-gray-50 border-gray-200 opacity-90" // 🎨 Estilo Publicado
+              : isSelected
+              ? "bg-white border-indigo-500 ring-1 ring-indigo-500 shadow-indigo-100"
+              : "bg-white border-gray-200 hover:shadow-md"
+          }
+      `}
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between">
-        {/* Lado Izquierdo: Info + Toggle Detalles */}
+        {/* Lado Izquierdo: Checkbox + Nombre */}
         <div
           className="flex-1 flex items-center gap-3 cursor-pointer"
           onClick={() => !isEditing && setIsOpen(!isOpen)}
         >
-          {/* Indicador Visual de Selección */}
+          {/* Checkbox Inteligente */}
           <div
             onClick={(e) => {
               e.stopPropagation();
               onToggleSelect();
             }}
-            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-              isSelected
-                ? "bg-indigo-600 border-indigo-600"
-                : "border-gray-300 hover:border-indigo-400"
+            className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+              isPublished
+                ? "bg-emerald-100 text-emerald-600 border border-emerald-200 cursor-default" // ✅ Publicado
+                : isSelected
+                ? "bg-indigo-600 border-indigo-600 text-white" // ✅ Seleccionado
+                : "border-2 border-gray-300 hover:border-indigo-400 bg-white" // ⬜ Pendiente
             }`}
           >
-            {isSelected && <Check className="w-3 h-3 text-white" />}
+            {(isSelected || isPublished) && (
+              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+            )}
           </div>
 
           <div>
@@ -219,12 +268,27 @@ function AdGroupResultCard({
                 onChange={(e) =>
                   setEditedGroup({ ...editedGroup, name: e.target.value })
                 }
-                className="text-base font-bold text-gray-900 border-b border-indigo-300 focus:outline-none px-1"
+                className="text-base font-bold text-gray-900 border-b border-indigo-300 focus:outline-none px-1 bg-transparent"
                 autoFocus
+                onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <div className="text-base font-bold text-gray-900">
-                {group.name}
+              <div className="flex items-center gap-2">
+                <div
+                  className={`text-base font-bold ${
+                    isPublished
+                      ? "text-gray-500 line-through decoration-gray-300"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {group.name}
+                </div>
+                {isPublished && (
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    LIVE{" "}
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </span>
+                )}
               </div>
             )}
 
@@ -239,7 +303,7 @@ function AdGroupResultCard({
           </div>
         </div>
 
-        {/* Lado Derecho: Menú de Opciones (...) */}
+        {/* Lado Derecho: Menú de Opciones */}
         <div className="flex items-center gap-2" ref={menuRef}>
           {isEditing ? (
             <div className="flex items-center gap-1">
@@ -257,54 +321,61 @@ function AdGroupResultCard({
               </button>
             </div>
           ) : (
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
+            // 🔒 Si está publicado, NO mostramos el menú de tres puntos
+            !isPublished && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
 
-              {/* DROPDOWN MENU */}
-              {showMenu && (
-                <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setShowMenu(false);
-                      setIsOpen(true);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <Edit3 className="w-4 h-4 text-gray-500" /> Edit Content
-                  </button>
-                  <button
-                    onClick={() => {
-                      onToggleSelect();
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  >
-                    <CheckCircle
-                      className={`w-4 h-4 ${
-                        isSelected ? "text-indigo-600" : "text-gray-500"
-                      }`}
-                    />
-                    {isSelected ? "Deselect" : "Select to Keep"}
-                  </button>
-                  <div className="h-px bg-gray-100 my-0"></div>
-                  <button
-                    onClick={() => {
-                      onRegenerate();
-                      setShowMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Regenerate this Group
-                  </button>
-                </div>
-              )}
-            </div>
+                {showMenu && (
+                  <div className="absolute right-0 top-10 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setShowMenu(false);
+                        setIsOpen(true);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Edit3 className="w-4 h-4 text-gray-500" /> Edit Content
+                    </button>
+                    <button
+                      onClick={() => {
+                        onToggleSelect();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <CheckCircle
+                        className={`w-4 h-4 ${
+                          isSelected ? "text-indigo-600" : "text-gray-500"
+                        }`}
+                      />
+                      {isSelected ? "Deselect" : "Select to Keep"}
+                    </button>
+                    <div className="h-px bg-gray-100 my-0"></div>
+                    <button
+                      onClick={() => {
+                        onRegenerate();
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm text-amber-600 hover:bg-amber-50 flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-4 h-4" /> Regenerate this Group
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
+          {/* Si está publicado, mostramos candado en lugar de menú */}
+          {isPublished && (
+            <Lock className="w-4 h-4 text-gray-400 opacity-50 mr-2" />
           )}
 
           {!isEditing && (
@@ -321,8 +392,7 @@ function AdGroupResultCard({
 
       {/* CUERPO DESPLEGABLE */}
       {isOpen && (
-        <div className="border-t border-gray-100 p-4 space-y-5 bg-gray-50/30">
-          {/* Si está editando, mostramos inputs, sino vista previa */}
+        <div className="border-t border-gray-100 p-4 space-y-5 bg-gray-50/50">
           {isEditing ? (
             <EditModeBody group={editedGroup} setGroup={setEditedGroup} />
           ) : (
@@ -333,7 +403,6 @@ function AdGroupResultCard({
     </div>
   );
 }
-
 // --- Vista de Solo Lectura (Lo que ya tenías) ---
 function ViewModeBody({ group, viewMode }) {
   return (

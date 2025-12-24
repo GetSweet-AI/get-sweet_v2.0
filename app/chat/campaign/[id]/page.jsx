@@ -69,6 +69,7 @@ export default function CampaignPage() {
 
         if (campRes.ok) {
           const data = await campRes.json();
+
           setCampaignDetails({
             name: data.name || "",
             objective: data.objective || "",
@@ -78,7 +79,11 @@ export default function CampaignPage() {
             language: data.language || "English",
             bidStrategy: data.bidStrategy || "",
             globalNegatives: data.globalNegatives || "",
+
+            status: data.status || "planning", // <--- Para que SettingsPanel sepa que está publicada
+            googleAdsResourceId: data.googleAdsResourceId || "", // <--- Para el link de la HelpCard
           });
+
           setDraftStatus(data.status || "planning");
 
           if (data.activeGenerationId) {
@@ -186,26 +191,17 @@ export default function CampaignPage() {
 
   // --- 4. REGENERAR UN SOLO GRUPO (NUEVO) ---
   const handleRegenerateGroup = async (groupIndex, groupData) => {
-    // toast.info("Regenerating group... (Simulated for MVP)");
-    // NOTA: Para el MVP real, podrías llamar al endpoint general y decirle a la IA:
-    // "Regenera solo el grupo X pero mantén los otros intactos".
-    // Por ahora, para no complicar el backend, podemos llamar a generate completo
-    // pero pasarle un feedback específico.
-
     const prompt = `Regenerate ONLY the Ad Group named "${groupData.name}". Keep the others exactly as they were.`;
     await handleGenerateDraft(prompt);
   };
 
   // --- 5. ACTUALIZAR UN SOLO GRUPO (EDICIÓN MANUAL) ---
   const handleUpdateGroup = async (groupIndex, updatedGroup) => {
-    // Creamos una copia local profunda
     const newData = JSON.parse(JSON.stringify(generatedData));
     newData.adGroups[groupIndex] = updatedGroup;
 
-    // Actualizamos estado local inmediatamente (Optimistic UI)
     setGeneratedData(newData);
 
-    // Guardamos en Backend
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/generations/${activeGenerationId}`,
@@ -228,32 +224,65 @@ export default function CampaignPage() {
   };
 
   // --- 6. APROBAR Y PUBLICAR ---
-  const handleApproveAndPublish = async () => {
+  // --- 6. APROBAR Y PUBLICAR (LÓGICA GRANULAR) ---
+  const handleApproveAndPublish = async (targetGroupIndices) => {
     if (!confirm("Are you ready to launch this campaign to Google Ads?"))
       return;
 
-    setIsPublishing(true);
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/publish`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            targetGroupIndices: targetGroupIndices,
+          }),
         }
       );
 
       const data = await res.json();
+
       if (!res.ok) throw new Error(data.message || "Publish failed");
 
-      setDraftStatus("active");
-      toast.success("🚀 Campaign Published Successfully to Google Ads!");
-    } catch (error) {
-      console.error(error);
-      toast.error(
-        "Failed to publish campaign. Check your Google Ads connection."
+      // ✅ 1. ACTUALIZAR ESTRUCTURA (CRÍTICO)
+      // Esto actualiza generatedData con la versión que tiene "isPublished: true"
+      // Al hacer esto, GeneratedResults detectará los cambios y pondrá los candados verdes al instante.
+      if (data.updatedStructure) {
+        setGeneratedData(data.updatedStructure);
+      }
+
+      // ✅ 2. CALCULAR SI YA TERMINAMOS TODO
+      // Verificamos si TODOS los grupos en la estructura nueva están publicados
+      const allDone = data.updatedStructure?.adGroups?.every(
+        (g) => g.isPublished === true
       );
-    } finally {
-      setIsPublishing(false);
+
+      // Si todo está publicado, el estado es "published". Si falta algo, es "active".
+      const newStatus = allDone ? "published" : "active";
+
+      // ✅ 3. ACTUALIZAR ESTADO DE LA CAMPAÑA
+      setCampaignDetails((prev) => ({
+        ...prev,
+        status: newStatus, // Esto controla si aparece la HelpCard en SettingsPanel
+        googleAdsResourceId: data.googleResourceId,
+      }));
+
+      // Actualizar banner superior
+      setDraftStatus(newStatus);
+
+      toast.success(data.message || "🚀 Updates published to Google Ads!");
+
+      // Opcional: Si todo está listo, scrollear arriba para ver la Help Card
+      if (allDone) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (error) {
+      console.error("Publish Error:", error);
+      toast.error(error.message);
     }
   };
 

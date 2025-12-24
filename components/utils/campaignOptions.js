@@ -78,7 +78,7 @@ export const PRIMARY_GOALS = [
   {
     value: "ACQUIRE_NEW_CUSTOMERS",
     label: "Acquire New Customers",
-    emoji: "busts_in_silhouette", // Emoji code or actual emoji 👥
+    emoji: "👥",
     description: "Focus on expanding the client base.",
   },
   {
@@ -99,6 +99,37 @@ export const PRIMARY_GOALS = [
     emoji: "✨",
     description: "Focus on high-intent prospects.",
   },
+];
+
+// --- 4. TONES (Brand Voice) ---
+export const TONE_OPTIONS = [
+  { value: "Professional", label: "Professional 👔" },
+  { value: "Friendly", label: "Friendly 🤝" },
+  { value: "Bold", label: "Bold 🦁" },
+  { value: "Witty", label: "Witty 💡" },
+  { value: "Urgent", label: "Urgent (Sales) ⏰" },
+  { value: "Empathetic", label: "Empathetic ❤️" },
+  { value: "Direct", label: "Direct 🎯" },
+];
+
+// --- 5. PRIMARY KPIS (Campaign Specific Metrics) ---
+export const KPI_OPTIONS = [
+  { value: "Cost Per Lead (CPL)", label: "Cost Per Lead (CPL)" },
+  { value: "Cost Per Acquisition (CPA)", label: "Cost Per Acquisition (CPA)" },
+  { value: "Return on Ad Spend (ROAS)", label: "Return on Ad Spend (ROAS)" },
+  { value: "Click-Through Rate (CTR)", label: "Click-Through Rate (CTR)" },
+  { value: "Conversion Rate", label: "Conversion Rate (%)" },
+  { value: "Total Leads Generated", label: "Total Leads Generated" },
+  { value: "Total Sales Value", label: "Total Sales Value" },
+  { value: "Impressions", label: "Impressions (Reach)" },
+];
+
+// --- 6. CHANNELS (Advertising Platforms) ---
+export const CHANNELS = [
+  { id: "Google Search", label: "Google Search" },
+  { id: "Website", label: "Website" },
+  { id: "Email", label: "Email" },
+  { id: "Social", label: "Social Media" },
 ];
 
 // --- HELPER PARA OBTENER LABEL ---
