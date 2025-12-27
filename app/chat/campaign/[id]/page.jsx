@@ -29,7 +29,7 @@ export default function CampaignPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [campaign, setCampaign] = useState(null);
 
   // --- Estados de Datos ---
   const [googleAdsData, setGoogleAdsData] = useState(null);
@@ -52,6 +52,45 @@ export default function CampaignPage() {
     globalNegatives: "",
   });
 
+  // 👇 NUEVA FUNCIÓN: Verifica el estado real en Google al cargar la página (Background Check)
+  const checkLiveGoogleStatus = async () => {
+    try {
+      // Reutilizamos el endpoint de analytics porque es el que trae el status real de Google
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/campaigns/${campaignId}/analytics`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const json = await res.json();
+
+      // Si la respuesta trae el status overview de Google...
+      if (json.success && json.data?.overview?.status) {
+        const googleStatus = json.data.overview.status; // "ENABLED" o "PAUSED"
+
+        // Mapeamos al vocabulario de la App
+        let realStatus = "draft";
+        if (googleStatus === "ENABLED") realStatus = "active";
+        else if (googleStatus === "PAUSED") realStatus = "paused";
+        else realStatus = googleStatus;
+
+        // Actualizamos el estado local si difiere del real
+        setDraftStatus((current) => {
+          if (current !== realStatus) {
+            console.log(`⚡ Background Sync: ${current} -> ${realStatus}`);
+
+            // Sincronizamos todos los estados dependientes
+            setCampaignDetails((prev) => ({ ...prev, status: realStatus }));
+            setCampaign((prev) => ({ ...prev, status: realStatus }));
+
+            return realStatus;
+          }
+          return current;
+        });
+      }
+    } catch (error) {
+      console.warn("⚠️ Background status check failed:", error);
+    }
+  };
+
   // --- 1. CARGA INICIAL ---
   useEffect(() => {
     if (!token || !campaignId) return;
@@ -69,6 +108,7 @@ export default function CampaignPage() {
 
         if (campRes.ok) {
           const data = await campRes.json();
+          setCampaign(data);
 
           setCampaignDetails({
             name: data.name || "",
@@ -79,9 +119,8 @@ export default function CampaignPage() {
             language: data.language || "English",
             bidStrategy: data.bidStrategy || "",
             globalNegatives: data.globalNegatives || "",
-
-            status: data.status || "planning", // <--- Para que SettingsPanel sepa que está publicada
-            googleAdsResourceId: data.googleAdsResourceId || "", // <--- Para el link de la HelpCard
+            status: data.status || "planning",
+            googleAdsResourceId: data.googleAdsResourceId || "",
           });
 
           setDraftStatus(data.status || "planning");
@@ -92,6 +131,12 @@ export default function CampaignPage() {
               setActiveGenerationId(data.activeGenerationId._id);
               setDraftVersion(data.activeGenerationId.version);
             }
+          }
+
+          // 👇 DISPARAMOS LA VERIFICACIÓN SILENCIOSA AQUÍ
+          // Si la campaña ya está publicada (tiene ID), consultamos a Google en segundo plano
+          if (data.googleAdsResourceId) {
+            checkLiveGoogleStatus();
           }
         }
 
@@ -111,6 +156,7 @@ export default function CampaignPage() {
     };
 
     fetchAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, token]);
 
   // --- 2. GUARDAR CONFIGURACIÓN ---
@@ -189,13 +235,13 @@ export default function CampaignPage() {
     }
   };
 
-  // --- 4. REGENERAR UN SOLO GRUPO (NUEVO) ---
+  // --- 4. REGENERAR UN SOLO GRUPO ---
   const handleRegenerateGroup = async (groupIndex, groupData) => {
     const prompt = `Regenerate ONLY the Ad Group named "${groupData.name}". Keep the others exactly as they were.`;
     await handleGenerateDraft(prompt);
   };
 
-  // --- 5. ACTUALIZAR UN SOLO GRUPO (EDICIÓN MANUAL) ---
+  // --- 5. ACTUALIZAR UN SOLO GRUPO ---
   const handleUpdateGroup = async (groupIndex, updatedGroup) => {
     const newData = JSON.parse(JSON.stringify(generatedData));
     newData.adGroups[groupIndex] = updatedGroup;
@@ -214,9 +260,7 @@ export default function CampaignPage() {
           body: JSON.stringify({ structure: newData }),
         }
       );
-
       if (!res.ok) throw new Error("Failed to save changes");
-      // toast.success("Changes saved"); // Ya lo hace el componente hijo
     } catch (error) {
       console.error(error);
       toast.error("Failed to sync changes with server");
@@ -224,7 +268,6 @@ export default function CampaignPage() {
   };
 
   // --- 6. APROBAR Y PUBLICAR ---
-  // --- 6. APROBAR Y PUBLICAR (LÓGICA GRANULAR) ---
   const handleApproveAndPublish = async (targetGroupIndices) => {
     if (!confirm("Are you ready to launch this campaign to Google Ads?"))
       return;
@@ -248,26 +291,25 @@ export default function CampaignPage() {
 
       if (!res.ok) throw new Error(data.message || "Publish failed");
 
-      // ✅ 1. ACTUALIZAR ESTRUCTURA (CRÍTICO)
-      // Esto actualiza generatedData con la versión que tiene "isPublished: true"
-      // Al hacer esto, GeneratedResults detectará los cambios y pondrá los candados verdes al instante.
+      // ✅ 1. ACTUALIZAR ESTRUCTURA LOCALMENTE
       if (data.updatedStructure) {
         setGeneratedData(data.updatedStructure);
       }
 
-      // ✅ 2. CALCULAR SI YA TERMINAMOS TODO
-      // Verificamos si TODOS los grupos en la estructura nueva están publicados
-      const allDone = data.updatedStructure?.adGroups?.every(
-        (g) => g.isPublished === true
-      );
+      // ✅ 2. ACTUALIZAR ESTADO DE LA CAMPAÑA
+      // Asumimos "active" tras publicar, aunque podría ser "published"
+      const newStatus = "active";
 
-      // Si todo está publicado, el estado es "published". Si falta algo, es "active".
-      const newStatus = allDone ? "published" : "active";
-
-      // ✅ 3. ACTUALIZAR ESTADO DE LA CAMPAÑA
       setCampaignDetails((prev) => ({
         ...prev,
-        status: newStatus, // Esto controla si aparece la HelpCard en SettingsPanel
+        status: newStatus,
+        googleAdsResourceId: data.googleResourceId,
+      }));
+
+      // Actualizamos campaign para que el Toggle se active
+      setCampaign((prev) => ({
+        ...prev,
+        status: newStatus,
         googleAdsResourceId: data.googleResourceId,
       }));
 
@@ -276,13 +318,31 @@ export default function CampaignPage() {
 
       toast.success(data.message || "🚀 Updates published to Google Ads!");
 
-      // Opcional: Si todo está listo, scrollear arriba para ver la Help Card
-      if (allDone) {
+      if (
+        data.updatedStructure?.adGroups?.every((g) => g.isPublished === true)
+      ) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (error) {
       console.error("Publish Error:", error);
       toast.error(error.message);
+    }
+  };
+
+  // Callback para cuando ResultsPanel sincroniza (por si acaso el background check falló)
+  const handleGoogleSync = (googleStatus) => {
+    const appStatus =
+      googleStatus === "ENABLED"
+        ? "active"
+        : googleStatus === "PAUSED"
+        ? "paused"
+        : "draft";
+
+    if (draftStatus !== appStatus) {
+      console.log("🔄 Syncing Banner Status (Via ResultsPanel) to:", appStatus);
+      setDraftStatus(appStatus);
+      setCampaignDetails((prev) => ({ ...prev, status: appStatus }));
+      setCampaign((prev) => ({ ...prev, status: appStatus }));
     }
   };
 
@@ -301,6 +361,12 @@ export default function CampaignPage() {
       </div>
     );
 
+  const handleStatusChange = (newStatus) => {
+    setCampaign((prev) => ({ ...prev, status: newStatus }));
+    setCampaignDetails((prev) => ({ ...prev, status: newStatus }));
+    setDraftStatus(newStatus);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <LeftSidebar
@@ -316,6 +382,8 @@ export default function CampaignPage() {
 
       <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
         <CampaignStatusBanner
+          onStatusChange={handleStatusChange}
+          campaign={campaign}
           status={draftStatus}
           provider="Google Ads"
           version={draftVersion}
@@ -343,7 +411,7 @@ export default function CampaignPage() {
                 onGenerateDraft={handleGenerateDraft}
                 onSave={handleSaveSettings}
                 onApprove={handleApproveAndPublish}
-                onDiscard={handleUnlock} // Pasar función de descarte
+                onDiscard={handleUnlock}
                 // Nuevas Props para manejo granular
                 onRegenerateGroup={handleRegenerateGroup}
                 onUpdateGroup={handleUpdateGroup}
@@ -356,7 +424,7 @@ export default function CampaignPage() {
 
           {activeTab === "results" && (
             <div className="h-full overflow-y-auto">
-              <ResultsPanel />
+              <ResultsPanel onSyncStatus={handleGoogleSync} />
             </div>
           )}
         </div>
